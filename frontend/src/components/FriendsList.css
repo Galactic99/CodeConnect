@@ -161,6 +161,43 @@
   text-align: center;
 }
 
+.load-more-button {
+  padding: 12px 20px;
+  background: black;
+  color: white;
+  border: 2px solid blue;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.3s ease, transform 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.load-more-button:hover {
+  background: blue;
+  transform: scale(1.05);
+  color: white;
+}
+
+.load-more-button:disabled {
+  background: #6b7280;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.load-more-button .spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  border-left-color: white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
 @media (max-width: 768px) {
   .friends-container {
     margin: 1rem;
