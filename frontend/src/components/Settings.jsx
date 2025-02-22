@@ -1,361 +1,304 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
-import { getProfile, updateProfile } from '../lib/supabase';
+import './Settings.css';
 
 const Settings = () => {
-  const navigate = useNavigate();
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState('profile'); // 'profile' or 'security'
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
-  const [avatarFile, setAvatarFile] = useState(null);
-  const [avatarPreview, setAvatarPreview] = useState(null);
-  const [currentUser, setCurrentUser] = useState(null);
-  const [skills, setSkills] = useState([]);
-  const [newSkill, setNewSkill] = useState('');
+  const [activeTab, setActiveTab] = useState('profile'); // 'profile', 'account', or 'preferences'
   
-  const [profileForm, setProfileForm] = useState({
+  const [profile, setProfile] = useState({
     username: '',
     full_name: '',
+    avatar_url: '',
     bio: '',
-    avatar_url: ''
-  });
-
-  const [securityForm, setSecurityForm] = useState({
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: ''
+    github_url: '',
+    linkedin_url: '',
+    website_url: '',
+    experience_level: 'Beginner',
+    available_for_hire: true
   });
 
   useEffect(() => {
-    const initializeSettings = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
+    fetchProfile();
+  }, []);
 
-        // Get current user
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
-        if (userError) throw userError;
-        if (!user) {
-          navigate('/');
-          return;
-        }
-
-        setCurrentUser(user);
-
-        // Get profile data
-        const profileData = await getProfile(user.id);
-        if (profileData) {
-          setProfileForm({
-            username: profileData.username || '',
-            full_name: profileData.full_name || '',
-            bio: profileData.bio || '',
-            avatar_url: profileData.avatar_url || ''
-          });
-          setSkills(profileData.skills || []);
-          if (profileData.avatar_url) {
-            setAvatarPreview(profileData.avatar_url);
-          }
-        }
-      } catch (err) {
-        console.error('Error initializing settings:', err);
-        setError(err.message);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    initializeSettings();
-  }, [navigate]);
-
-  const handleAvatarChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setAvatarFile(file);
-      const preview = URL.createObjectURL(file);
-      setAvatarPreview(preview);
-    }
-  };
-
-  const uploadAvatar = async () => {
-    if (!avatarFile || !currentUser) return null;
-    
+  const fetchProfile = async () => {
     try {
-      const fileExt = avatarFile.name.split('.').pop();
-      const fileName = `${currentUser.id}-${Math.random().toString(36).slice(2)}.${fileExt}`;
-      const filePath = `avatars/${fileName}`;
+      setLoading(true);
+      setError(null);
 
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, avatarFile);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('No user found');
 
-      if (uploadError) throw uploadError;
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select(`
+          *,
+          developer_profiles (
+            experience_level,
+            bio,
+            github_url,
+            linkedin_url,
+            website_url,
+            available_for_hire
+          )
+        `)
+        .eq('id', user.id)
+        .single();
 
-      const { data: { publicUrl } } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(filePath);
+      if (profileError) throw profileError;
 
-      return publicUrl;
-    } catch (error) {
-      console.error('Error uploading avatar:', error);
-      throw error;
-    }
-  };
-
-  const handleProfileSubmit = async (e) => {
-    e.preventDefault();
-    if (!currentUser) return;
-
-    setIsSaving(true);
-    setError(null);
-    setSuccess(null);
-
-    try {
-      let avatarUrl = profileForm.avatar_url;
-      if (avatarFile) {
-        avatarUrl = await uploadAvatar();
-      }
-
-      await updateProfile(currentUser.id, {
-        ...profileForm,
-        avatar_url: avatarUrl,
-        skills: skills
+      setProfile({
+        ...profileData,
+        ...profileData.developer_profiles?.[0],
       });
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+      setError('Failed to load profile');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      setSaving(true);
+      setError(null);
+      setSuccess(null);
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('No user found');
+
+      // Update profiles table
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({
+          username: profile.username,
+          full_name: profile.full_name,
+          avatar_url: profile.avatar_url,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', user.id);
+
+      if (profileError) throw profileError;
+
+      // Update or insert developer_profiles
+      const { error: devProfileError } = await supabase
+        .from('developer_profiles')
+        .upsert({
+          user_id: user.id,
+          experience_level: profile.experience_level,
+          bio: profile.bio,
+          github_url: profile.github_url,
+          linkedin_url: profile.linkedin_url,
+          website_url: profile.website_url,
+          available_for_hire: profile.available_for_hire,
+          updated_at: new Date().toISOString()
+        });
+
+      if (devProfileError) throw devProfileError;
 
       setSuccess('Profile updated successfully');
-      setAvatarFile(null);
     } catch (error) {
       console.error('Error updating profile:', error);
-      setError(error.message);
+      setError('Failed to update profile');
     } finally {
-      setIsSaving(false);
+      setSaving(false);
     }
   };
 
-  const handleAddSkill = () => {
-    if (newSkill.trim()) {
-      setSkills([...skills, newSkill.trim()]);
-      setNewSkill('');
-    }
+  const handleChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setProfile(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }));
   };
 
-  const handleRemoveSkill = (skillToRemove) => {
-    setSkills(skills.filter(skill => skill !== skillToRemove));
-  };
-
-  const handleSecuritySubmit = async (e) => {
-    e.preventDefault();
-    if (!currentUser) return;
-
-    setIsSaving(true);
-    setError(null);
-    setSuccess(null);
-
-    try {
-      if (securityForm.newPassword !== securityForm.confirmPassword) {
-        throw new Error('New passwords do not match');
-      }
-
-      const { error } = await supabase.auth.updateUser({
-        password: securityForm.newPassword
-      });
-
-      if (error) throw error;
-
-      setSuccess('Password updated successfully');
-      setSecurityForm({
-        currentPassword: '',
-        newPassword: '',
-        confirmPassword: ''
-      });
-    } catch (error) {
-      console.error('Error updating password:', error);
-      setError(error.message);
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  if (isLoading) {
+  if (loading) {
     return (
       <div className="settings-container">
-        <div className="settings-box">
-          <div className="loading">Loading settings...</div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!currentUser) {
-    return (
-      <div className="settings-container">
-        <div className="settings-box">
-          <div className="error-message">Please sign in to access settings</div>
-          <div className="settings-footer">
-            <button className="back-button" onClick={() => navigate('/')}>
-              Back to Home
-            </button>
-          </div>
-        </div>
+        <div className="loading-spinner">Loading...</div>
       </div>
     );
   }
 
   return (
     <div className="settings-container">
-      <div className="settings-box">
-        <div className="settings-header">
-          <h1>Settings</h1>
-          <div className="tab-switcher">
-            <button
-              className={`tab-button ${activeTab === 'profile' ? 'active' : ''}`}
-              onClick={() => setActiveTab('profile')}
-            >
-              Profile
-            </button>
-            <button
-              className={`tab-button ${activeTab === 'security' ? 'active' : ''}`}
-              onClick={() => setActiveTab('security')}
-            >
-              Security
-            </button>
-          </div>
+      <div className="settings-header">
+        <h1>Settings</h1>
+        <div className="tabs">
+          <button 
+            className={`tab ${activeTab === 'profile' ? 'active' : ''}`}
+            onClick={() => setActiveTab('profile')}
+          >
+            Profile
+          </button>
+          <button 
+            className={`tab ${activeTab === 'account' ? 'active' : ''}`}
+            onClick={() => setActiveTab('account')}
+          >
+            Account
+          </button>
+          <button 
+            className={`tab ${activeTab === 'preferences' ? 'active' : ''}`}
+            onClick={() => setActiveTab('preferences')}
+          >
+            Preferences
+          </button>
         </div>
+      </div>
 
-        {error && <div className="error-message">{error}</div>}
-        {success && <div className="success-message">{success}</div>}
+      {error && (
+        <div className="error-message">
+          {error}
+        </div>
+      )}
 
-        {activeTab === 'profile' ? (
-          <form onSubmit={handleProfileSubmit} className="settings-form">
-            <div className="avatar-section">
-              <div className="avatar-preview">
-                {avatarPreview ? (
-                  <img src={avatarPreview} alt="Profile" />
-                ) : (
-                  <div className="avatar-placeholder">
-                    {profileForm.username?.[0]?.toUpperCase()}
-                  </div>
-                )}
-              </div>
-              <div className="avatar-upload">
-                <label className="upload-button" htmlFor="avatar">
-                  Change Photo
-                </label>
+      {success && (
+        <div className="success-message">
+          {success}
+        </div>
+      )}
+
+      <div className="settings-content">
+        {activeTab === 'profile' && (
+          <form onSubmit={handleSubmit} className="settings-form">
+            <div className="form-section">
+              <h2>Basic Information</h2>
+              <div className="form-group">
+                <label htmlFor="username">Username</label>
                 <input
-                  type="file"
-                  id="avatar"
-                  accept="image/*"
-                  onChange={handleAvatarChange}
-                  style={{ display: 'none' }}
-                />
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="username">Username</label>
-              <input
-                id="username"
-                type="text"
-                value={profileForm.username}
-                onChange={(e) => setProfileForm({ ...profileForm, username: e.target.value })}
-                required
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="fullName">Full Name</label>
-              <input
-                id="fullName"
-                type="text"
-                value={profileForm.full_name}
-                onChange={(e) => setProfileForm({ ...profileForm, full_name: e.target.value })}
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="bio">Bio</label>
-              <textarea
-                id="bio"
-                value={profileForm.bio}
-                onChange={(e) => setProfileForm({ ...profileForm, bio: e.target.value })}
-                rows={4}
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="skills">Skills</label>
-              <div className="skills-input-container">
-                <input
-                  id="skills"
                   type="text"
-                  value={newSkill}
-                  onChange={(e) => setNewSkill(e.target.value)}
-                  placeholder="Add a skill"
-                  className="skills-input"
+                  id="username"
+                  name="username"
+                  value={profile.username}
+                  onChange={handleChange}
+                  required
                 />
-                <button type="button" className="action-button primary" onClick={handleAddSkill}>Add Skill</button>
               </div>
-              <ul className="skills-list">
-                {skills.map((skill, index) => (
-                  <li key={index} className="skill-item">
-                    {skill} <button className="action-button secondary" onClick={() => handleRemoveSkill(skill)}>Remove</button>
-                  </li>
-                ))}
-              </ul>
+
+              <div className="form-group">
+                <label htmlFor="full_name">Full Name</label>
+                <input
+                  type="text"
+                  id="full_name"
+                  name="full_name"
+                  value={profile.full_name}
+                  onChange={handleChange}
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="bio">Bio</label>
+                <textarea
+                  id="bio"
+                  name="bio"
+                  value={profile.bio}
+                  onChange={handleChange}
+                  rows="4"
+                />
+              </div>
             </div>
 
-            <button type="submit" className="submit-button" disabled={isSaving}>
-              {isSaving ? 'Saving...' : 'Save Changes'}
-            </button>
-          </form>
-        ) : (
-          <form onSubmit={handleSecuritySubmit} className="settings-form">
-            <div className="form-group">
-              <label htmlFor="currentPassword">Current Password</label>
-              <input
-                id="currentPassword"
-                type="password"
-                value={securityForm.currentPassword}
-                onChange={(e) => setSecurityForm({ ...securityForm, currentPassword: e.target.value })}
-                required
-              />
+            <div className="form-section">
+              <h2>Professional Details</h2>
+              <div className="form-group">
+                <label htmlFor="experience_level">Experience Level</label>
+                <select
+                  id="experience_level"
+                  name="experience_level"
+                  value={profile.experience_level}
+                  onChange={handleChange}
+                >
+                  <option value="Beginner">Beginner</option>
+                  <option value="Intermediate">Intermediate</option>
+                  <option value="Advanced">Advanced</option>
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="github_url">GitHub Profile</label>
+                <input
+                  type="url"
+                  id="github_url"
+                  name="github_url"
+                  value={profile.github_url}
+                  onChange={handleChange}
+                  placeholder="https://github.com/username"
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="linkedin_url">LinkedIn Profile</label>
+                <input
+                  type="url"
+                  id="linkedin_url"
+                  name="linkedin_url"
+                  value={profile.linkedin_url}
+                  onChange={handleChange}
+                  placeholder="https://linkedin.com/in/username"
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="website_url">Personal Website</label>
+                <input
+                  type="url"
+                  id="website_url"
+                  name="website_url"
+                  value={profile.website_url}
+                  onChange={handleChange}
+                  placeholder="https://yourwebsite.com"
+                />
+              </div>
+
+              <div className="form-group checkbox-group">
+                <label>
+                  <input
+                    type="checkbox"
+                    name="available_for_hire"
+                    checked={profile.available_for_hire}
+                    onChange={handleChange}
+                  />
+                  Available for Hire
+                </label>
+              </div>
             </div>
 
-            <div className="form-group">
-              <label htmlFor="newPassword">New Password</label>
-              <input
-                id="newPassword"
-                type="password"
-                value={securityForm.newPassword}
-                onChange={(e) => setSecurityForm({ ...securityForm, newPassword: e.target.value })}
-                required
-              />
+            <div className="form-actions">
+              <button 
+                type="submit" 
+                className="btn btn-primary"
+                disabled={saving}
+              >
+                {saving ? 'Saving...' : 'Save Changes'}
+              </button>
             </div>
-
-            <div className="form-group">
-              <label htmlFor="confirmPassword">Confirm New Password</label>
-              <input
-                id="confirmPassword"
-                type="password"
-                value={securityForm.confirmPassword}
-                onChange={(e) => setSecurityForm({ ...securityForm, confirmPassword: e.target.value })}
-                required
-              />
-            </div>
-
-            <button type="submit" className="submit-button" disabled={isSaving}>
-              {isSaving ? 'Updating...' : 'Update Password'}
-            </button>
           </form>
         )}
 
-        <div className="settings-footer">
-          <button className="back-button" onClick={() => navigate('/')}>
-            Back to Home
-          </button>
-        </div>
+        {activeTab === 'account' && (
+          <div className="account-settings">
+            <div className="form-section">
+              <h2>Account Settings</h2>
+              <p>Email and password settings coming soon...</p>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'preferences' && (
+          <div className="preferences-settings">
+            <div className="form-section">
+              <h2>Preferences</h2>
+              <p>Notification and theme preferences coming soon...</p>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

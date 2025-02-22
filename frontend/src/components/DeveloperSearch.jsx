@@ -47,7 +47,7 @@ const DeveloperSearch = () => {
       setInterests(interestsResponse.data?.map(interest => ({ value: interest.name, label: interest.name })) || []);
     } catch (error) {
       console.error('Error fetching skills and interests:', error);
-      setError('Failed to load skills and interests');
+      setError('Failed to load skills and interests. Please try again later.');
     }
   };
 
@@ -248,20 +248,14 @@ const DeveloperSearch = () => {
 
       {loading && (
         <div className="loading-spinner">
-          <div className="spinner"></div>
+          Loading...
         </div>
       )}
 
-      {!loading && hasMore && developers.length > 0 && (
-        <button onClick={loadMore} className="btn btn-secondary load-more-button">
+      {hasMore && ( 
+        <button onClick={loadMore} className="load-more-button">
           Load More
         </button>
-      )}
-
-      {!loading && developers.length === 0 && !error && (
-        <div className="no-results card">
-          No developers found matching your criteria
-        </div>
       )}
     </div>
   );
