@@ -3,18 +3,18 @@
   flex-direction: column;
   gap: 20px;
   padding: 20px;
+  height: 100vh;
+  background-color: var(--bg-primary);
 }
 
 .editor-card {
-  background: rgba(45, 45, 45, 0.9);
+  background: var(--bg-secondary);
   border-radius: 16px;
   padding: 20px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-}
-
-h2 {
-  color: #ffffff;
-  margin-bottom: 10px;
+  box-shadow: var(--shadow-lg);
+  height: calc(100vh - 40px);
+  display: flex;
+  flex-direction: column;
 }
 
 .editor-header {
@@ -22,27 +22,42 @@ h2 {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
+  padding: 0 10px;
+}
+
+.editor-header h2 {
+  color: var(--text-primary);
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
 }
 
 .language-selector {
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 5px;
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
   padding: 8px 12px;
   font-size: 14px;
   cursor: pointer;
   transition: all 0.3s ease;
+  min-width: 150px;
 }
 
 .language-selector:hover {
-  background: rgba(255, 255, 255, 0.15);
-  border-color: rgba(255, 255, 255, 0.3);
+  border-color: var(--accent-primary);
+}
+
+.language-selector:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 2px var(--accent-primary-alpha);
 }
 
 .language-selector option {
-  background: #2d2d2d;
-  color: white;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  padding: 8px;
 }
 
 .button-container {
@@ -50,21 +65,95 @@ h2 {
   gap: 10px;
 }
 
-.chat-toggle-button {
-  position: static;
-  top: auto;
-  right: auto;
-  background: linear-gradient(135deg, #007bff, #00bcd4);
-  color: white;
+.chat-toggle-button,
+.copy-session-button,
+.run-button {
+  padding: 8px 16px;
   border: none;
-  border-radius: 5px;
-  padding: 10px 15px;
+  border-radius: 8px;
+  font-weight: 600;
   cursor: pointer;
-  transition: background 0.3s;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.chat-toggle-button {
+  background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+  color: white;
 }
 
 .chat-toggle-button:hover {
-  background: linear-gradient(135deg, #00bcd4, #007bff);
+  background: linear-gradient(135deg, var(--accent-secondary), var(--accent-primary));
+  transform: translateY(-1px);
+}
+
+.copy-session-button {
+  background: linear-gradient(135deg, #28a745, #34d058);
+  color: white;
+}
+
+.copy-session-button:hover {
+  background: linear-gradient(135deg, #34d058, #28a745);
+  transform: translateY(-1px);
+}
+
+.run-button {
+  background: linear-gradient(135deg, #ffc107, #ffca2c);
+  color: white;
+  min-width: 80px;
+}
+
+.run-button:hover:not(:disabled) {
+  background: linear-gradient(135deg, #ffca2c, #ffc107);
+  transform: translateY(-1px);
+}
+
+.run-button:disabled {
+  background: #6b7280;
+  cursor: not-allowed;
+  opacity: 0.7;
+  transform: none;
+}
+
+.output-container {
+  margin-top: 20px;
+  padding: 15px;
+  background: var(--bg-tertiary);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-family: 'Fira Code', 'Courier New', Courier, monospace;
+  overflow-y: auto;
+  max-height: 200px;
+  border: 2px solid var(--border-color);
+}
+
+.output-container h3 {
+  margin: 0 0 10px 0;
+  color: var(--text-primary);
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.output-container pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  padding: 10px;
+  background: var(--bg-secondary);
+  border-radius: 4px;
+  border: 1px solid var(--border-color);
+}
+
+.output-container pre.executing {
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.6; }
+  100% { opacity: 1; }
 }
 
 .chat-popup {
@@ -75,60 +164,61 @@ h2 {
   width: 90%;
   max-width: 600px;
   height: 80%;
-  background: rgba(45, 45, 45, 0.9);
+  background: var(--bg-secondary);
   border-radius: 16px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-lg);
   z-index: 1001;
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  border: 2px solid var(--border-color);
 }
 
-.chat-popup .messages {
-  height: calc(100% - 50px);
-  overflow-y: auto;
+/* Monaco Editor Customizations */
+.monaco-editor {
+  padding-top: 5px;
 }
 
-.chat-popup .chat-input {
-  padding: 10px;
+.monaco-editor .margin {
+  background-color: var(--bg-secondary) !important;
 }
 
-.copy-session-button {
-  background: linear-gradient(135deg, #28a745, #34d058);
-  color: white;
-  border: none;
-  border-radius: 5px;
-  padding: 10px 15px;
-  cursor: pointer;
-  transition: background 0.3s;
-  margin-left: 10px; /* Space between buttons */
-}
-
-.copy-session-button:hover {
-  background: linear-gradient(135deg, #34d058, #28a745);
-}
-
-.run-button {
-  background: linear-gradient(135deg, #ffc107, #ffca2c);
-  color: white;
-  border: none;
-  border-radius: 5px;
-  padding: 10px 15px;
-  cursor: pointer;
-  transition: background 0.3s;
-}
-
-.run-button:hover {
-  background: linear-gradient(135deg, #ffca2c, #ffc107);
-}
-
-.output-container {
-  margin-top: 20px;
-  padding: 10px;
-  background: rgba(0, 0, 0, 0.8);
+.monaco-editor .monaco-scrollable-element {
   border-radius: 8px;
-  color: #ffffff;
-  font-family: 'Courier New', Courier, monospace;
-  overflow-y: auto;
-  max-height: 200px;
+  overflow: hidden;
+}
+
+/* Dark mode specific styles */
+[data-theme='dark'] .editor-card {
+  background: rgba(45, 45, 45, 0.9);
+}
+
+[data-theme='dark'] .output-container {
+  background: rgba(30, 30, 30, 0.9);
+}
+
+[data-theme='dark'] .output-container pre {
+  background: rgba(20, 20, 20, 0.9);
+}
+
+.chat-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  background: var(--bg-secondary);
+  border-bottom: 2px solid var(--border-color);
+}
+
+.close-chat-button {
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  cursor: pointer;
+  font-size: 1.5rem;
+  transition: color 0.3s;
+}
+
+.close-chat-button:hover {
+  color: var(--error-color);
 } 
