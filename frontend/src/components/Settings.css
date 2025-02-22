@@ -184,6 +184,143 @@
   color: var(--text-secondary);
 }
 
+.form-section.skills-interests {
+  background: linear-gradient(to right bottom, var(--bg-primary), var(--bg-secondary));
+  border: 2px solid var(--border-color);
+}
+
+.form-section.skills-interests h2 {
+  color: var(--accent-primary);
+  font-size: 1.8rem;
+  border-bottom: 2px solid var(--accent-primary);
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+}
+
+.skill-proficiency-input {
+  margin-top: 0.75rem;
+  padding: 1rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.skill-proficiency-input:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  border-color: var(--accent-primary);
+}
+
+.skill-proficiency-input label {
+  margin: 0;
+  flex: 1;
+  font-weight: 500;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.skill-proficiency-input label::before {
+  content: '⚡';
+  font-size: 1.2rem;
+}
+
+.skill-proficiency-input select {
+  width: 140px;
+  padding: 0.5rem;
+  border: 2px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.skill-proficiency-input select:hover,
+.skill-proficiency-input select:focus {
+  border-color: var(--accent-primary);
+  outline: none;
+}
+
+/* Skills and Interests headers */
+.skills-section-header,
+.interests-section-header {
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.skills-section-header::before {
+  content: '🎯';
+  font-size: 1.4rem;
+}
+
+.interests-section-header::before {
+  content: '💡';
+  font-size: 1.4rem;
+}
+
+/* Enhanced React Select styles for this section */
+.skills-interests .react-select {
+  margin-bottom: 1.5rem;
+}
+
+.skills-interests .react-select .select__control {
+  min-height: 50px;
+  border-width: 2px;
+}
+
+.skills-interests .react-select .select__multi-value {
+  background: var(--accent-primary);
+  padding: 2px;
+  border-radius: 6px;
+}
+
+.skills-interests .react-select .select__multi-value__label {
+  color: white !important;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.skills-interests .react-select .select__multi-value__remove {
+  color: white;
+  cursor: pointer;
+  padding: 0 6px;
+  border-radius: 4px;
+}
+
+.skills-interests .react-select .select__multi-value__remove:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+/* Proficiency levels color coding */
+.skill-proficiency-input select option[value="1"] { color: #718096; }
+.skill-proficiency-input select option[value="2"] { color: #4299e1; }
+.skill-proficiency-input select option[value="3"] { color: #48bb78; }
+.skill-proficiency-input select option[value="4"] { color: #805ad5; }
+.skill-proficiency-input select option[value="5"] { color: #d69e2e; }
+
+/* Add some spacing between skills and interests sections */
+.skills-section {
+  margin-bottom: 2rem;
+  padding-bottom: 2rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.interests-section {
+  padding-top: 1rem;
+}
+
+/* Responsive adjustments */
 @media (max-width: 768px) {
   .settings-container {
     padding: 1rem;
@@ -214,4 +351,227 @@
   .form-section h2 {
     font-size: 1.25rem;
   }
+
+  .skill-proficiency-input {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: stretch;
+  }
+
+  .skill-proficiency-input select {
+    width: 100%;
+  }
+}
+
+.helper-text {
+  font-size: 0.9rem;
+  color: var(--text-tertiary);
+  margin-left: 0.5rem;
+}
+
+.skills-section-header,
+.interests-section-header {
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.skills-section-header label,
+.interests-section-header label {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* Animate new skills/interests when added */
+.skill-proficiency-input {
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Add hover effect to the entire section */
+.form-section.skills-interests {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.form-section.skills-interests:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+}
+
+/* Style the section divider */
+.skills-section {
+  position: relative;
+}
+
+.skills-section::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 10%;
+  right: 10%;
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    transparent,
+    var(--border-color),
+    transparent
+  );
+}
+
+/* Add some depth to the select controls */
+.skills-interests .react-select .select__control {
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.skills-interests .react-select .select__control:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.skills-interests .react-select .select__control--is-focused {
+  box-shadow: 0 0 0 2px var(--accent-primary);
+}
+
+/* Add icons to the select placeholders */
+.skills-interests .react-select .select__placeholder {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.skills-interests .react-select .select__placeholder::before {
+  font-size: 1.1rem;
+}
+
+.skills-section .react-select .select__placeholder::before {
+  content: '🔍';
+}
+
+.interests-section .react-select .select__placeholder::before {
+  content: '🔍';
+}
+
+/* React Select custom styles */
+.react-select {
+  margin-top: 0.25rem;
+}
+
+.react-select .select__control {
+  background-color: var(--bg-secondary) !important;
+  border: 2px solid var(--border-color) !important;
+  border-radius: 8px !important;
+  min-height: 42px !important;
+  box-shadow: none !important;
+  transition: all 0.2s ease !important;
+}
+
+.react-select .select__control:hover {
+  border-color: var(--accent-primary) !important;
+}
+
+.react-select .select__control--is-focused {
+  border-color: var(--accent-primary) !important;
+  box-shadow: 0 0 0 1px var(--accent-primary) !important;
+}
+
+.react-select .select__menu {
+  background-color: var(--bg-secondary) !important;
+  border: 1px solid var(--border-color) !important;
+  border-radius: 8px !important;
+  box-shadow: var(--shadow-md) !important;
+  margin-top: 8px !important;
+  z-index: 10 !important;
+}
+
+.react-select .select__option {
+  background-color: var(--bg-secondary) !important;
+  color: var(--text-primary) !important;
+  cursor: pointer !important;
+  padding: 10px 12px !important;
+  font-size: 0.95rem !important;
+}
+
+.react-select .select__option:hover {
+  background-color: var(--bg-tertiary) !important;
+}
+
+.react-select .select__option--is-selected {
+  background-color: var(--accent-primary) !important;
+  color: white !important;
+}
+
+.react-select .select__multi-value {
+  background-color: var(--bg-tertiary) !important;
+  border-radius: 4px !important;
+  margin: 3px !important;
+}
+
+.react-select .select__multi-value__label {
+  color: var(--text-primary) !important;
+  font-size: 0.9rem !important;
+  padding: 4px 8px !important;
+}
+
+.react-select .select__multi-value__remove {
+  color: var(--text-secondary) !important;
+  padding: 0 6px !important;
+  border-radius: 0 4px 4px 0 !important;
+  transition: all 0.2s ease !important;
+}
+
+.react-select .select__multi-value__remove:hover {
+  background-color: var(--error-bg) !important;
+  color: var(--error-text) !important;
+}
+
+.react-select .select__input-container {
+  color: var(--text-primary) !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.react-select .select__placeholder {
+  color: var(--text-tertiary) !important;
+  font-size: 0.95rem !important;
+}
+
+.react-select .select__indicator {
+  color: var(--text-tertiary) !important;
+  padding: 0 8px !important;
+}
+
+.react-select .select__indicator:hover {
+  color: var(--text-primary) !important;
+}
+
+.react-select .select__indicator-separator {
+  background-color: var(--border-color) !important;
+}
+
+.react-select .select__menu-notice {
+  color: var(--text-tertiary) !important;
+  text-align: center !important;
+  padding: 10px !important;
+}
+
+.react-select .select__clear-indicator {
+  color: var(--text-tertiary) !important;
+  padding: 0 8px !important;
+  cursor: pointer !important;
+}
+
+.react-select .select__clear-indicator:hover {
+  color: var(--error-text) !important;
 } 
