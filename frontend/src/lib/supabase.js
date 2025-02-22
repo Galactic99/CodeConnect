@@ -65,10 +65,23 @@ export const searchUsers = async (query) => {
 };
 
 export const getFriends = async () => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+
   const { data, error } = await supabase
-    .from('user_friends')
-    .select('*')
-    .order('username');
+    .from('friendships')
+    .select(`
+      id,
+      user_id,
+      friend_id,
+      profiles!friendships_friend_id_fkey (
+        id,
+        username,
+        avatar_url
+      )
+    `)
+    .or(`user_id.eq.${user.id},friend_id.eq.${user.id}`)
+    .order('created_at', { ascending: false });
 
   if (error) throw error;
   return data;
@@ -76,25 +89,62 @@ export const getFriends = async () => {
 
 export const sendFriendRequest = async (receiverId) => {
   const senderId = await getCurrentUserId();
+  
+  // First, check if a request already exists
+  const { data: existingRequest, error: checkError } = await supabase
+    .from('friend_requests')
+    .select('*')
+    .eq('sender_id', senderId)
+    .eq('receiver_id', receiverId)
+    .single();
+
+  if (checkError && checkError.code !== 'PGRST116') {
+    throw checkError;
+  }
+
+  // If request exists, throw a more user-friendly error
+  if (existingRequest) {
+    throw new Error('Friend request already sent');
+  }
+
+  // Also check if they're already friends
+  const { data: existingFriendship, error: friendshipError } = await supabase
+    .from('friendships')
+    .select('*')
+    .or(`and(user_id.eq.${senderId},friend_id.eq.${receiverId}),and(user_id.eq.${receiverId},friend_id.eq.${senderId})`)
+    .single();
+
+  if (friendshipError && friendshipError.code !== 'PGRST116') {
+    throw friendshipError;
+  }
+
+  if (existingFriendship) {
+    throw new Error('Already friends with this user');
+  }
+
+  // If no existing request or friendship, create new request
   const { data, error } = await supabase
     .from('friend_requests')
-    .insert([{ sender_id: senderId, receiver_id: receiverId }]);
+    .insert([{ sender_id: senderId, receiver_id: receiverId }])
+    .select()
+    .single();
 
   if (error) throw error;
   return data;
 };
 
 export const getPendingFriendRequests = async () => {
-  const userId = await getCurrentUserId();
-  
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+
   const { data, error } = await supabase
     .from('friend_requests')
     .select(`
       id,
-      sender:sender_id(id, username, avatar_url),
+      sender:sender_id (id, username, avatar_url),
       created_at
     `)
-    .eq('receiver_id', userId)
+    .eq('receiver_id', user.id)
     .eq('status', 'pending')
     .order('created_at', { ascending: false });
 
@@ -175,4 +225,28 @@ export const subscribeToMessages = async (callback) => {
       }
     })
     .subscribe();
+};
+
+export const searchDevelopers = async (search_query, skill_filter, interest_filter, experience_filter, page_number, page_size) => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+
+  const currentUserId = user.id;
+
+  const { data, error } = await supabase
+    .rpc('search_developers', {
+      search_query,
+      skill_filter,
+      interest_filter,
+      experience_filter,
+      page_number,
+      page_size,
+      exclude_user_id: currentUserId
+    });
+
+  if (error) throw error;
+
+  // Filter out the current user from the results
+  const filteredData = data.filter(developer => developer.user_id !== currentUserId);
+  return filteredData;
 }; 

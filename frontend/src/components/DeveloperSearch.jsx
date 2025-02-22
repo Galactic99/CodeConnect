@@ -16,6 +16,7 @@ const DeveloperSearch = () => {
   const [error, setError] = useState(null);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
+  const [currentUserId, setCurrentUserId] = useState(null);
 
   const experienceLevels = [
     { value: 'Beginner', label: 'Beginner' },
@@ -24,6 +25,14 @@ const DeveloperSearch = () => {
   ];
 
   useEffect(() => {
+    const fetchCurrentUserId = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setCurrentUserId(user.id); // Set the current user ID
+      }
+    };
+
+    fetchCurrentUserId();
     fetchSkillsAndInterests();
   }, []);
 
@@ -137,49 +146,62 @@ const DeveloperSearch = () => {
     }
   };
 
-  const DeveloperCard = ({ developer }) => (
-    <div className="developer-card card">
-      <div className="developer-header">
-        <img 
-          src={developer.avatar_url || 'https://via.placeholder.com/50'} 
-          alt={developer.username}
-          className="developer-avatar"
-        />
-        <div className="developer-info">
-          <h3>{developer.full_name || developer.username}</h3>
-          <span className="experience-badge">{developer.experience_level}</span>
+  const DeveloperCard = ({ developer }) => {
+    const handleProfileClick = () => {
+      console.log('Clicked developer:', developer); // Debugging log
+      if (developer.user_id === currentUserId) {
+        // Redirect to settings if the user clicks on their own profile
+        window.location.href = '/settings';
+      } else {
+        // Redirect to the developer's profile
+        window.location.href = `/profile/${developer.user_id}`;
+      }
+    };
+
+    return (
+      <div className="developer-card card" onClick={handleProfileClick}>
+        <div className="developer-header">
+          <img 
+            src={developer.avatar_url || 'https://via.placeholder.com/50'} 
+            alt={developer.username}
+            className="developer-avatar"
+          />
+          <div className="developer-info">
+            <h3>{developer.full_name || developer.username}</h3>
+            <span className="experience-badge">{developer.experience_level}</span>
+          </div>
         </div>
+        <p className="developer-bio">{developer.bio || 'No bio available'}</p>
+        <div className="skills-container">
+          <h4>Skills</h4>
+          <div className="skill-tags">
+            {(developer.skills || []).map((skill, index) => (
+              <span key={index} className="skill-tag">{skill}</span>
+            ))}
+          </div>
+        </div>
+        <div className="interests-container">
+          <h4>Interests</h4>
+          <div className="interest-tags">
+            {(developer.interests || []).map((interest, index) => (
+              <span key={index} className="interest-tag">{interest}</span>
+            ))}
+          </div>
+        </div>
+        {developer.match_score !== undefined && (
+          <div className="match-score">
+            Match Score: {Math.round(developer.match_score * 100)}%
+          </div>
+        )}
+        <button 
+          className="btn btn-primary"
+          onClick={handleProfileClick}
+        >
+          View Profile
+        </button>
       </div>
-      <p className="developer-bio">{developer.bio || 'No bio available'}</p>
-      <div className="skills-container">
-        <h4>Skills</h4>
-        <div className="skill-tags">
-          {(developer.skills || []).map((skill, index) => (
-            <span key={index} className="skill-tag">{skill}</span>
-          ))}
-        </div>
-      </div>
-      <div className="interests-container">
-        <h4>Interests</h4>
-        <div className="interest-tags">
-          {(developer.interests || []).map((interest, index) => (
-            <span key={index} className="interest-tag">{interest}</span>
-          ))}
-        </div>
-      </div>
-      {developer.match_score !== undefined && (
-        <div className="match-score">
-          Match Score: {Math.round(developer.match_score * 100)}%
-        </div>
-      )}
-      <button 
-        className="btn btn-primary"
-        onClick={() => window.location.href = `/profile/${developer.user_id}`}
-      >
-        View Profile
-      </button>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="developer-search-container">

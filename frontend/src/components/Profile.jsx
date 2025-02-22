@@ -5,7 +5,8 @@ import {
   getProfile,
   getFriends,
   sendFriendRequest,
-  respondToFriendRequest
+  respondToFriendRequest,
+  getPendingFriendRequests
 } from '../lib/supabase';
 import './Profile.css';
 
@@ -19,6 +20,7 @@ const Profile = () => {
   const [currentUser, setCurrentUser] = useState(null);
   const [friendshipStatus, setFriendshipStatus] = useState('not_friend');
   const [activeTab, setActiveTab] = useState('overview'); // 'overview', 'projects', 'activity'
+  const [pendingRequests, setPendingRequests] = useState([]);
 
   useEffect(() => {
     loadProfileData();
@@ -42,11 +44,12 @@ const Profile = () => {
       const profileData = await getProfile(id);
       setProfile(profileData);
       
-      // Load friends if viewing own profile
-      if (user.id === id) {
-        const friendsData = await getFriends();
-        setFriends(friendsData || []);
-      }
+      // Load friends and pending requests
+      const friendsData = await getFriends();
+      setFriends(friendsData || []);
+      
+      const requestsData = await getPendingFriendRequests();
+      setPendingRequests(requestsData || []);
     } catch (error) {
       console.error('Error loading profile:', error);
       setError('Failed to load profile');
@@ -61,7 +64,13 @@ const Profile = () => {
       setFriendshipStatus('request_sent');
     } catch (error) {
       console.error('Error sending friend request:', error);
-      setError('Failed to send friend request');
+      if (error.message === 'Friend request already sent') {
+        setError('You have already sent a friend request to this user');
+      } else if (error.message === 'Already friends with this user') {
+        setError('You are already friends with this user');
+      } else {
+        setError('Failed to send friend request. Please try again.');
+      }
     }
   };
 
@@ -106,6 +115,10 @@ const Profile = () => {
   }
 
   const isOwnProfile = currentUser?.id === id;
+  const isFriend = friends.some(friend => 
+    friend.id === id || friend.friend_id === id || friend.user_id === id
+  );
+  const isRequestPending = pendingRequests.some(request => request.sender_id === currentUser.id && request.receiver_id === id);
 
   return (
     <div className="profile-container">
@@ -153,7 +166,7 @@ const Profile = () => {
               </button>
             ) : (
               <div className="action-buttons">
-                {friendshipStatus === 'not_friend' && (
+                {!isRequestPending && !isFriend && (
                   <button
                     className="btn-primary"
                     onClick={handleConnect}
@@ -162,29 +175,17 @@ const Profile = () => {
                     Connect
                   </button>
                 )}
-                {friendshipStatus === 'friend' && (
-                  <button
-                    className="btn-secondary"
-                    onClick={handleMessage}
-                  >
-                    <i className="fas fa-comment"></i>
-                    Message
-                  </button>
+                {isFriend && (
+                  <span className="status-text">
+                    <i className="fas fa-user-friends"></i>
+                    Friends ✅
+                  </span>
                 )}
-                {friendshipStatus === 'request_sent' && (
+                {isRequestPending && (
                   <span className="status-text">
                     <i className="fas fa-clock"></i>
                     Request Sent
                   </span>
-                )}
-                {friendshipStatus === 'request_received' && (
-                  <button
-                    className="btn-primary"
-                    onClick={handleAcceptRequest}
-                  >
-                    <i className="fas fa-check"></i>
-                    Accept Request
-                  </button>
                 )}
               </div>
             )}
