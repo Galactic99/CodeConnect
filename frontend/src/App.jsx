@@ -6,6 +6,7 @@ import Editor from './components/Editor';
 import Profile from './components/Profile';
 import SessionManager from './components/SessionManager';
 import Settings from './components/Settings';
+import FriendsList from './components/FriendsList';
 import './styles.css';
 
 // Wrapper component to get URL params
@@ -31,6 +32,7 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={session ? <SessionManager /> : <Auth />} />
+        <Route path="/friends" element={<FriendsList />} />
         <Route path="/session/:id" element={<EditorWrapper />} />
         <Route path="/profile/:id" element={session ? <Profile /> : <Auth />} />
         <Route path="/settings" element={session ? <Settings /> : <Auth />} />

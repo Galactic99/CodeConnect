@@ -9,6 +9,7 @@ const getCurrentUserId = async () => {
 
 // Profile functions
 export const getProfile = async (userId) => {
+  console.log('Fetching profile for user ID:', userId); // Debug log
   const { data, error } = await supabase
     .from('profiles')
     .select('*')
@@ -16,6 +17,7 @@ export const getProfile = async (userId) => {
     .single();
 
   if (error) {
+    console.error('Error fetching profile:', error); // Debug log
     // If no profile exists, create one
     if (error.code === 'PGRST116') {
       const { data: userData } = await supabase.auth.getUser();
@@ -73,9 +75,10 @@ export const getFriends = async () => {
 };
 
 export const sendFriendRequest = async (receiverId) => {
+  const senderId = await getCurrentUserId();
   const { data, error } = await supabase
     .from('friend_requests')
-    .insert([{ receiver_id: receiverId }]);
+    .insert([{ sender_id: senderId, receiver_id: receiverId }]);
 
   if (error) throw error;
   return data;

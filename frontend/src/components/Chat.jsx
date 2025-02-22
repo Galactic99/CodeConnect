@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import * as Y from 'yjs';
+import './Chat.css';
 
-const Chat = ({ ydoc }) => {
+const Chat = ({ ydoc, currentUser }) => {
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState([]);
   const ychat = ydoc.getText('chat');
@@ -17,13 +18,15 @@ const Chat = ({ ydoc }) => {
 
   const sendMessage = () => {
     if (message.trim()) {
-      ychat.insert(ychat.length, `\n${message}`);
+      const chatMessage = `${currentUser.username}: ${message}`;
+      ychat.insert(ychat.length, `\n${chatMessage}`);
       setMessage('');
     }
   };
 
   return (
     <div className="chat-container">
+      <h2>Chat</h2>
       <div className="messages">
         {messages.map((msg, i) => (
           <div key={i} className="message">

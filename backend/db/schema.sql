@@ -96,7 +96,7 @@ CREATE POLICY "Users can view their own friend requests"
 
 CREATE POLICY "Users can send friend requests"
   ON friend_requests FOR INSERT
-  WITH CHECK (auth.uid() = sender_id);
+  USING (true);
 
 CREATE POLICY "Users can update friend requests they received"
   ON friend_requests FOR UPDATE

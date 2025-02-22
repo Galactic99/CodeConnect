@@ -7,6 +7,8 @@ import {
   sendFriendRequest as sendRequest,
   respondToFriendRequest
 } from '../lib/supabase';
+import Mailbox from './Mailbox';
+import Sidebar from './Sidebar';
 
 const SessionManager = () => {
   const [sessionId, setSessionId] = useState('');
@@ -111,90 +113,84 @@ const SessionManager = () => {
 
   return (
     <div className="home-container">
-      <div className="home-box">
-        <div className="home-header">
-          <h1>CodeConnect</h1>
-          <div className="header-actions">
+      <Sidebar />
+      <div className="home-content">
+        <div className="home-box card">
+          <h2>Create New Session</h2>
+          <button
+            className="create-session-button"
+            onClick={createSession}
+            disabled={isCreating}
+          >
+            {isCreating ? 'Creating...' : 'Create New Session'}
+          </button>
+        </div>
+
+        <div className="home-box card">
+          <h2>Join Existing Session</h2>
+          <form onSubmit={joinSession} className="join-session-form">
+            <div className="form-group">
+              <label htmlFor="sessionId">Session ID</label>
+              <input
+                id="sessionId"
+                placeholder="Enter session ID"
+                value={sessionId}
+                onChange={(e) => setSessionId(e.target.value)}
+                required
+              />
+            </div>
             <button
-              className="profile-button"
-              onClick={() => navigate('/settings')}
+              type="submit"
+              className="join-session-button"
+              disabled={!sessionId.trim()}
             >
-              Manage Profile
+              Join Session
             </button>
-          </div>
-          <div className="tab-switcher">
-            <button
-              className={`tab-button ${activeTab === 'coding' ? 'active' : ''}`}
-              onClick={() => setActiveTab('coding')}
-            >
-              Coding Sessions
-            </button>
-            <button
-              className={`tab-button ${activeTab === 'social' ? 'active' : ''}`}
-              onClick={() => setActiveTab('social')}
-            >
-              Connect
-            </button>
-          </div>
+          </form>
+        </div>
+
+        <div className="home-box card">
+          <h2>Manage Profile</h2>
+          <button
+            className="profile-button"
+            onClick={() => navigate('/settings')}
+          >
+            Manage Profile
+          </button>
+        </div>
+
+        <div className="home-box card">
+          <h2>Search Developers</h2>
+          <form onSubmit={handleSearch} className="search-form">
+            <div className="form-group">
+              <input
+                type="text"
+                placeholder="Search developers..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="search-input"
+              />
+              <button
+                type="submit"
+                className="search-button"
+                disabled={isSearching || !searchQuery.trim()}
+              >
+                {isSearching ? 'Searching...' : 'Search'}
+              </button>
+            </div>
+          </form>
         </div>
 
         {error && <div className="error-message">{error}</div>}
 
         {activeTab === 'coding' ? (
           <div className="home-actions">
-            <button
-              className="create-session-button"
-              onClick={createSession}
-              disabled={isCreating}
-            >
-              {isCreating ? 'Creating...' : 'Create New Session'}
-            </button>
-
             <div className="session-divider">
               <span>OR</span>
             </div>
-
-            <form onSubmit={joinSession} className="join-session-form">
-              <div className="form-group">
-                <label htmlFor="sessionId">Join Existing Session</label>
-                <input
-                  id="sessionId"
-                  placeholder="Enter session ID"
-                  value={sessionId}
-                  onChange={(e) => setSessionId(e.target.value)}
-                  required
-                />
-              </div>
-              <button
-                type="submit"
-                className="join-session-button"
-                disabled={!sessionId.trim()}
-              >
-                Join Session
-              </button>
-            </form>
           </div>
         ) : (
           <div className="social-section">
-            <form onSubmit={handleSearch} className="search-form">
-              <div className="form-group">
-                <input
-                  type="text"
-                  placeholder="Search developers..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="search-input"
-                />
-                <button
-                  type="submit"
-                  className="search-button"
-                  disabled={isSearching || !searchQuery.trim()}
-                >
-                  {isSearching ? 'Searching...' : 'Search'}
-                </button>
-              </div>
-            </form>
-
             {searchResults.length > 0 && (
               <div className="search-results">
                 <h3>Search Results</h3>
@@ -218,14 +214,14 @@ const SessionManager = () => {
                               Add Friend
                             </button>
                           )}
-                          {user.friendship_status === 'friend' && (
+                          {/* {user.friendship_status === 'friend' && (
                             <button
                               className="action-button"
                               onClick={() => sendMessage(user.id)}
                             >
                               Message
                             </button>
-                          )}
+                          )} */}
                           {user.friendship_status === 'request_sent' && (
                             <span className="status-text">Request Sent</span>
                           )}
@@ -267,6 +263,8 @@ const SessionManager = () => {
             )}
           </div>
         )}
+
+        <Mailbox />
 
         <div className="home-footer">
           <button className="logout-button" onClick={handleLogout}>

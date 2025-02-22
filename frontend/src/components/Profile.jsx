@@ -15,11 +15,18 @@ const Profile = () => {
   const [friends, setFriends] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editForm, setEditForm] = useState({
+    username: '',
+    full_name: '',
+    bio: ''
+  });
   const [currentUser, setCurrentUser] = useState(null);
-  const [friendshipStatus, setFriendshipStatus] = useState('not_friend'); // 'not_friend', 'friend', 'request_sent', 'request_received'
+  const [friendshipStatus, setFriendshipStatus] = useState('not_friend');
 
   useEffect(() => {
     const loadProfileData = async () => {
+      console.log('Loading profile for user ID:', id); // Debug log
       try {
         setIsLoading(true);
         setError(null);
@@ -35,38 +42,46 @@ const Profile = () => {
 
         // Get profile data
         const profileData = await getProfile(id);
+        console.log('Profile data fetched:', profileData); // Debug log
         setProfile(profileData);
+        
+        if (profileData) {
+          setEditForm({
+            username: profileData.username || '',
+            full_name: profileData.full_name || '',
+            bio: profileData.bio || ''
+          });
 
-        // If viewing own profile, get friends list
-        if (user.id === id) {
-          const friendsData = await getFriends();
-          setFriends(friendsData || []);
-        }
+          // Load friends if viewing own profile
+          if (user.id === id) {
+            const friendsData = await getFriends();
+            setFriends(friendsData || []);
+          }
 
-        // Check friendship status
-        const { data: friendshipData } = await supabase
-          .from('friendships')
-          .select('*')
-          .or(`user_id.eq.${user.id},friend_id.eq.${user.id}`)
-          .or(`user_id.eq.${id},friend_id.eq.${id}`)
-          .single();
-
-        if (friendshipData) {
-          setFriendshipStatus('friend');
-        } else {
-          // Check for friend requests
-          const { data: requestData } = await supabase
-            .from('friend_requests')
+          // Check friendship status
+          const { data: friendshipData } = await supabase
+            .from('friendships')
             .select('*')
-            .or(`sender_id.eq.${user.id}.and.receiver_id.eq.${id},sender_id.eq.${id}.and.receiver_id.eq.${user.id}`)
-            .eq('status', 'pending')
+            .or(`user_id.eq.${user.id},friend_id.eq.${user.id}`)
+            .or(`user_id.eq.${id},friend_id.eq.${id}`)
             .single();
 
-          if (requestData) {
-            setFriendshipStatus(requestData.sender_id === user.id ? 'request_sent' : 'request_received');
+          if (friendshipData) {
+            setFriendshipStatus('friend');
+          } else {
+            // Check for friend requests
+            const { data: requestData } = await supabase
+              .from('friend_requests')
+              .select('*')
+              .or(`sender_id.eq.${user.id}.and.receiver_id.eq.${id},sender_id.eq.${id}.and.receiver_id.eq.${user.id}`)
+              .eq('status', 'pending')
+              .single();
+
+            if (requestData) {
+              setFriendshipStatus(requestData.sender_id === user.id ? 'request_sent' : 'request_received');
+            }
           }
         }
-
       } catch (err) {
         console.error('Error loading profile:', err);
         setError('Failed to load profile');
@@ -78,11 +93,30 @@ const Profile = () => {
     loadProfileData();
   }, [id, navigate]);
 
+  const handleEdit = async (e) => {
+    e.preventDefault();
+    try {
+      setError(null);
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update(editForm)
+        .eq('id', currentUser.id);
+
+      if (updateError) throw updateError;
+      
+      setProfile({ ...profile, ...editForm });
+      setIsEditing(false);
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      setError('Failed to update profile');
+    }
+  };
+
   const handleConnect = async () => {
     try {
       setError(null);
       await sendFriendRequest(id);
-      setFriendshipStatus('request_sent');
+      setFriendshipStatus('request_sent'); // Update status to reflect the sent request
     } catch (err) {
       console.error('Error sending friend request:', err);
       setError('Failed to send friend request');
@@ -122,11 +156,6 @@ const Profile = () => {
       <div className="profile-container">
         <div className="profile-box">
           <div className="error-message">Profile not found</div>
-          <div className="settings-footer">
-            <button className="back-button" onClick={() => navigate('/')}>
-              Back to Home
-            </button>
-          </div>
         </div>
       </div>
     );
@@ -154,6 +183,19 @@ const Profile = () => {
             <h1>{profile.username}</h1>
             {profile.full_name && <h2>{profile.full_name}</h2>}
             {profile.bio && <p className="bio">{profile.bio}</p>}
+            
+            <div className="skills-section">
+              <h3>Skills</h3>
+              {profile.skills && profile.skills.length > 0 ? (
+                <ul className="skills-list">
+                  {profile.skills.map((skill, index) => (
+                    <li key={index} className="skill-item">{skill}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p>No skills added yet.</p>
+              )}
+            </div>
             
             <div className="profile-actions">
               {isOwnProfile ? (

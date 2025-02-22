@@ -13,6 +13,8 @@ const Settings = () => {
   const [avatarFile, setAvatarFile] = useState(null);
   const [avatarPreview, setAvatarPreview] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
+  const [skills, setSkills] = useState([]);
+  const [newSkill, setNewSkill] = useState('');
   
   const [profileForm, setProfileForm] = useState({
     username: '',
@@ -52,6 +54,7 @@ const Settings = () => {
             bio: profileData.bio || '',
             avatar_url: profileData.avatar_url || ''
           });
+          setSkills(profileData.skills || []);
           if (profileData.avatar_url) {
             setAvatarPreview(profileData.avatar_url);
           }
@@ -117,7 +120,8 @@ const Settings = () => {
 
       await updateProfile(currentUser.id, {
         ...profileForm,
-        avatar_url: avatarUrl
+        avatar_url: avatarUrl,
+        skills: skills
       });
 
       setSuccess('Profile updated successfully');
@@ -128,6 +132,17 @@ const Settings = () => {
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handleAddSkill = () => {
+    if (newSkill.trim()) {
+      setSkills([...skills, newSkill.trim()]);
+      setNewSkill('');
+    }
+  };
+
+  const handleRemoveSkill = (skillToRemove) => {
+    setSkills(skills.filter(skill => skill !== skillToRemove));
   };
 
   const handleSecuritySubmit = async (e) => {
@@ -267,6 +282,28 @@ const Settings = () => {
                 onChange={(e) => setProfileForm({ ...profileForm, bio: e.target.value })}
                 rows={4}
               />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="skills">Skills</label>
+              <div className="skills-input-container">
+                <input
+                  id="skills"
+                  type="text"
+                  value={newSkill}
+                  onChange={(e) => setNewSkill(e.target.value)}
+                  placeholder="Add a skill"
+                  className="skills-input"
+                />
+                <button type="button" className="action-button primary" onClick={handleAddSkill}>Add Skill</button>
+              </div>
+              <ul className="skills-list">
+                {skills.map((skill, index) => (
+                  <li key={index} className="skill-item">
+                    {skill} <button className="action-button secondary" onClick={() => handleRemoveSkill(skill)}>Remove</button>
+                  </li>
+                ))}
+              </ul>
             </div>
 
             <button type="submit" className="submit-button" disabled={isSaving}>

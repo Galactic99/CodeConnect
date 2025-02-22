@@ -1,0 +1,134 @@
+.editor-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 20px;
+}
+
+.editor-card {
+  background: rgba(45, 45, 45, 0.9);
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+h2 {
+  color: #ffffff;
+  margin-bottom: 10px;
+}
+
+.editor-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.language-selector {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 5px;
+  padding: 8px 12px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.language-selector:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.language-selector option {
+  background: #2d2d2d;
+  color: white;
+}
+
+.button-container {
+  display: flex;
+  gap: 10px;
+}
+
+.chat-toggle-button {
+  position: static;
+  top: auto;
+  right: auto;
+  background: linear-gradient(135deg, #007bff, #00bcd4);
+  color: white;
+  border: none;
+  border-radius: 5px;
+  padding: 10px 15px;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.chat-toggle-button:hover {
+  background: linear-gradient(135deg, #00bcd4, #007bff);
+}
+
+.chat-popup {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 90%;
+  max-width: 600px;
+  height: 80%;
+  background: rgba(45, 45, 45, 0.9);
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  z-index: 1001;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.chat-popup .messages {
+  height: calc(100% - 50px);
+  overflow-y: auto;
+}
+
+.chat-popup .chat-input {
+  padding: 10px;
+}
+
+.copy-session-button {
+  background: linear-gradient(135deg, #28a745, #34d058);
+  color: white;
+  border: none;
+  border-radius: 5px;
+  padding: 10px 15px;
+  cursor: pointer;
+  transition: background 0.3s;
+  margin-left: 10px; /* Space between buttons */
+}
+
+.copy-session-button:hover {
+  background: linear-gradient(135deg, #34d058, #28a745);
+}
+
+.run-button {
+  background: linear-gradient(135deg, #ffc107, #ffca2c);
+  color: white;
+  border: none;
+  border-radius: 5px;
+  padding: 10px 15px;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.run-button:hover {
+  background: linear-gradient(135deg, #ffca2c, #ffc107);
+}
+
+.output-container {
+  margin-top: 20px;
+  padding: 10px;
+  background: rgba(0, 0, 0, 0.8);
+  border-radius: 8px;
+  color: #ffffff;
+  font-family: 'Courier New', Courier, monospace;
+  overflow-y: auto;
+  max-height: 200px;
+} 

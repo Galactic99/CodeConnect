@@ -232,23 +232,33 @@ body {
   .home-container {
     display: flex;
     justify-content: center;
-    align-items: center;
+    align-items: flex-start;
     min-height: 100vh;
-    padding: 20px;
+    padding: 40px 20px;
     background: linear-gradient(135deg, #1e1e1e 0%, #2d2d2d 100%);
   }
   
-  .home-box {
+  .home-content {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
     width: 100%;
-    max-width: 500px;
+    max-width: 800px;
+  }
+  
+  .home-box {
     background: rgba(45, 45, 45, 0.9);
     backdrop-filter: blur(10px);
     border-radius: 16px;
-    padding: 40px;
+    padding: 20px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
   }
   
   .home-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
     text-align: center;
     margin-bottom: 40px;
   }
@@ -913,4 +923,236 @@ body {
 
   .profile-button:active {
     transform: translateY(0);
+  }
+
+  .mailbox-container {
+    background: rgba(45, 45, 45, 0.9);
+    border-radius: 16px;
+    padding: 20px;
+    margin-top: 20px;
+  }
+
+  .friend-requests-list {
+    list-style: none;
+    padding: 0;
+  }
+
+  .friend-request-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .request-actions button {
+    margin-left: 10px;
+    padding: 5px 10px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+
+  .request-actions button:hover {
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  .sidebar {
+    width: 250px;
+    background: rgba(45, 45, 45, 0.9);
+    border-radius: 16px;
+    padding: 20px;
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+  }
+
+  .sidebar h2 {
+    color: #ffffff;
+    margin-bottom: 16px;
+  }
+
+  .sidebar ul {
+    list-style: none;
+    padding: 0;
+  }
+
+  .sidebar li {
+    margin: 10px 0;
+  }
+
+  .sidebar a {
+    color: #007bff;
+    text-decoration: none;
+    font-weight: 500;
+  }
+
+  .sidebar a:hover {
+    text-decoration: underline;
+  }
+
+  .friends-list-container {
+    background: rgba(45, 45, 45, 0.9);
+    border-radius: 16px;
+    padding: 20px;
+    margin-top: 20px;
+  }
+
+  .friends-list {
+    list-style: none;
+    padding: 0;
+  }
+
+  .friend-item {
+    padding: 10px;
+    cursor: pointer;
+    transition: background 0.3s;
+  }
+
+  .friend-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  .home-content {
+    margin-left: 280px; /* Adjust margin to accommodate the sidebar */
+    padding: 20px;
+  }
+
+  .card {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+
+  /* Mobile Responsive Styles */
+  @media screen and (max-width: 768px) {
+    .home-content {
+      margin-left: 0;
+      padding: 10px;
+    }
+
+    .sidebar {
+      position: relative;
+      width: 100%;
+      top: 0;
+      left: 0;
+      margin-bottom: 20px;
+    }
+
+    .home-box {
+      padding: 15px;
+    }
+
+    .search-form .form-group {
+      flex-direction: column;
+    }
+
+    .search-button {
+      width: 100%;
+    }
+
+    .user-info {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 10px;
+    }
+
+    .user-actions {
+      width: 100%;
+      justify-content: flex-start;
+    }
+
+    .profile-header {
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+
+    .profile-info {
+      text-align: center;
+    }
+
+    .profile-actions {
+      justify-content: center;
+    }
+
+    .friends-grid {
+      grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    }
+  }
+
+  @media screen and (max-width: 480px) {
+    .home-container {
+      padding: 10px;
+    }
+
+    .auth-box,
+    .profile-box,
+    .settings-box {
+      padding: 20px;
+    }
+
+    .form-group input {
+      padding: 10px;
+    }
+
+    .create-session-button,
+    .join-session-button,
+    .profile-button {
+      padding: 12px;
+      font-size: 1rem;
+    }
+
+    .friend-card {
+      padding: 8px;
+    }
+
+    .friend-avatar {
+      width: 40px;
+      height: 40px;
+    }
+
+    .action-button {
+      padding: 4px 8px;
+      font-size: 0.8rem;
+    }
+  }
+
+  /* Tablet Responsive Styles */
+  @media screen and (min-width: 769px) and (max-width: 1024px) {
+    .home-content {
+      margin-left: 0;
+      padding: 20px;
+    }
+
+    .sidebar {
+      position: relative;
+      width: 100%;
+      top: 0;
+      left: 0;
+      margin-bottom: 20px;
+    }
+
+    .friends-grid {
+      grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+    }
+  }
+
+  /* Ensure buttons and inputs are touch-friendly */
+  @media (hover: none) and (pointer: coarse) {
+    .action-button,
+    .create-session-button,
+    .join-session-button,
+    .profile-button,
+    .search-button {
+      min-height: 44px;
+      padding: 12px 20px;
+    }
+
+    .form-group input {
+      min-height: 44px;
+    }
   }
