@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
+import Select from 'react-select';
 import './Settings.css';
 
 const Settings = () => {
@@ -21,8 +22,15 @@ const Settings = () => {
     available_for_hire: true
   });
 
+  const [availableSkills, setAvailableSkills] = useState([]);
+  const [availableInterests, setAvailableInterests] = useState([]);
+  const [selectedSkills, setSelectedSkills] = useState([]);
+  const [selectedInterests, setSelectedInterests] = useState([]);
+
   useEffect(() => {
     fetchProfile();
+    fetchAvailableSkills();
+    fetchAvailableInterests();
   }, []);
 
   const fetchProfile = async () => {
@@ -32,6 +40,70 @@ const Settings = () => {
 
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('No user found');
+
+      // First get the developer profile ID
+      const { data: devProfile, error: devProfileError } = await supabase
+        .from('developer_profiles')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (devProfileError && devProfileError.code !== 'PGRST116') {
+        throw devProfileError;
+      }
+
+      if (devProfile) {
+        // Fetch skills with proficiency
+        const { data: skillsData, error: skillsError } = await supabase
+          .from('developer_skills')
+          .select(`
+            skill_id,
+            proficiency,
+            skills (
+              id,
+              name,
+              category
+            )
+          `)
+          .eq('developer_id', devProfile.id);
+
+        if (skillsError) throw skillsError;
+
+        // Fetch interests
+        const { data: interestsData, error: interestsError } = await supabase
+          .from('developer_interests')
+          .select(`
+            interest_id,
+            interests (
+              id,
+              name,
+              category
+            )
+          `)
+          .eq('developer_id', devProfile.id);
+
+        if (interestsError) throw interestsError;
+
+        // Transform skills and interests data
+        const transformedSkills = skillsData?.map(ds => ({
+          value: ds.skill_id,
+          label: ds.skills.name,
+          category: ds.skills.category,
+          proficiency: ds.proficiency
+        })) || [];
+
+        const transformedInterests = interestsData?.map(di => ({
+          value: di.interest_id,
+          label: di.interests.name,
+          category: di.interests.category
+        })) || [];
+
+        setSelectedSkills(transformedSkills);
+        setSelectedInterests(transformedInterests);
+
+        console.log('Fetched Skills:', transformedSkills);
+        console.log('Fetched Interests:', transformedInterests);
+      }
 
       // Try to fetch the profile with joined developer_profiles data
       const { data: profileData, error: profileError } = await supabase
@@ -129,6 +201,50 @@ const Settings = () => {
     }
   };
 
+  const fetchAvailableSkills = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('skills')
+        .select('*')
+        .order('name');
+
+      if (error) throw error;
+
+      setAvailableSkills(
+        data.map(skill => ({
+          value: skill.id,
+          label: skill.name,
+          category: skill.category
+        }))
+      );
+    } catch (error) {
+      console.error('Error fetching skills:', error);
+      setError('Failed to load available skills');
+    }
+  };
+
+  const fetchAvailableInterests = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('interests')
+        .select('*')
+        .order('name');
+
+      if (error) throw error;
+
+      setAvailableInterests(
+        data.map(interest => ({
+          value: interest.id,
+          label: interest.name,
+          category: interest.category
+        }))
+      );
+    } catch (error) {
+      console.error('Error fetching interests:', error);
+      setError('Failed to load available interests');
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -222,6 +338,49 @@ const Settings = () => {
         }
       }
 
+      // Update skills
+      if (selectedSkills.length > 0) {
+        // Delete existing skills
+        await supabase
+          .from('developer_skills')
+          .delete()
+          .eq('developer_id', existingDevProfile.id);
+
+        // Insert new skills
+        const { error: skillsError } = await supabase
+          .from('developer_skills')
+          .insert(
+            selectedSkills.map(skill => ({
+              developer_id: existingDevProfile.id,
+              skill_id: skill.value,
+              proficiency: skill.proficiency || 1
+            }))
+          );
+
+        if (skillsError) throw skillsError;
+      }
+
+      // Update interests
+      if (selectedInterests.length > 0) {
+        // Delete existing interests
+        await supabase
+          .from('developer_interests')
+          .delete()
+          .eq('developer_id', existingDevProfile.id);
+
+        // Insert new interests
+        const { error: interestsError } = await supabase
+          .from('developer_interests')
+          .insert(
+            selectedInterests.map(interest => ({
+              developer_id: existingDevProfile.id,
+              interest_id: interest.value
+            }))
+          );
+
+        if (interestsError) throw interestsError;
+      }
+
       // Refresh the profile data to ensure UI is in sync
       await fetchProfile();
       setSuccess('Profile updated successfully');
@@ -245,6 +404,24 @@ const Settings = () => {
       ...prev,
       [name]: type === 'checkbox' ? checked : value
     }));
+  };
+
+  const handleSkillChange = (selectedOptions) => {
+    setSelectedSkills(selectedOptions || []);
+  };
+
+  const handleSkillProficiencyChange = (skillId, newProficiency) => {
+    setSelectedSkills(prevSkills =>
+      prevSkills.map(skill =>
+        skill.value === skillId
+          ? { ...skill, proficiency: parseInt(newProficiency) }
+          : skill
+      )
+    );
+  };
+
+  const handleInterestChange = (selectedOptions) => {
+    setSelectedInterests(selectedOptions || []);
   };
 
   if (loading) {
@@ -395,6 +572,57 @@ const Settings = () => {
                   />
                   Available for Hire
                 </label>
+              </div>
+            </div>
+
+            <div className="form-section skills-interests">
+              <h2>Skills & Interests</h2>
+              
+              <div className="skills-section">
+                <div className="skills-section-header">
+                  <label>Skills</label>
+                  <span className="helper-text">(Select skills and set proficiency levels)</span>
+                </div>
+                <Select
+                  isMulti
+                  options={availableSkills}
+                  value={selectedSkills}
+                  onChange={handleSkillChange}
+                  className="react-select"
+                  placeholder="Search or select skills..."
+                  noOptionsMessage={() => "No matching skills found"}
+                />
+                {selectedSkills.map(skill => (
+                  <div key={skill.value} className="skill-proficiency-input">
+                    <label>{skill.label}</label>
+                    <select
+                      value={skill.proficiency || 1}
+                      onChange={(e) => handleSkillProficiencyChange(skill.value, e.target.value)}
+                    >
+                      <option value="1">Beginner</option>
+                      <option value="2">Elementary</option>
+                      <option value="3">Intermediate</option>
+                      <option value="4">Advanced</option>
+                      <option value="5">Expert</option>
+                    </select>
+                  </div>
+                ))}
+              </div>
+
+              <div className="interests-section">
+                <div className="interests-section-header">
+                  <label>Interests</label>
+                  <span className="helper-text">(Select areas that interest you)</span>
+                </div>
+                <Select
+                  isMulti
+                  options={availableInterests}
+                  value={selectedInterests}
+                  onChange={handleInterestChange}
+                  className="react-select"
+                  placeholder="Search or select interests..."
+                  noOptionsMessage={() => "No matching interests found"}
+                />
               </div>
             </div>
 
