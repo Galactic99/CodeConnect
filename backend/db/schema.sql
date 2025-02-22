@@ -207,6 +207,7 @@ BEGIN
   SELECT
     dp.id,
     setweight(to_tsvector('english', COALESCE(p.username, '')), 'A') ||
+    setweight(to_tsvector('english', COALESCE(p.full_name, '')), 'A') ||
     setweight(to_tsvector('english', COALESCE(dp.bio, '')), 'B') ||
     setweight(to_tsvector('english', COALESCE(dp.experience_level::text, '')), 'C'),
     setweight(to_tsvector('english', string_agg(COALESCE(s.name, ''), ' ')), 'A'),
@@ -218,7 +219,7 @@ BEGIN
   LEFT JOIN developer_interests di ON di.developer_id = dp.id
   LEFT JOIN interests i ON i.id = di.interest_id
   WHERE dp.id = NEW.id
-  GROUP BY dp.id, p.username, dp.bio, dp.experience_level
+  GROUP BY dp.id, p.username, p.full_name, dp.bio, dp.experience_level
   ON CONFLICT (developer_id) DO UPDATE
   SET
     search_vector = EXCLUDED.search_vector,
@@ -240,6 +241,9 @@ BEGIN
 END
 $$;
 
+-- Drop existing search_developers function
+DROP FUNCTION IF EXISTS search_developers(text, text[], text[], experience_level[], integer, integer, uuid);
+
 -- Create function to search developers
 CREATE OR REPLACE FUNCTION search_developers(
   search_query TEXT,
@@ -247,7 +251,8 @@ CREATE OR REPLACE FUNCTION search_developers(
   interest_filter TEXT[] DEFAULT NULL,
   experience_filter experience_level[] DEFAULT NULL,
   page_number INTEGER DEFAULT 1,
-  page_size INTEGER DEFAULT 10
+  page_size INTEGER DEFAULT 10,
+  exclude_user_id UUID DEFAULT NULL
 )
 RETURNS TABLE (
   id UUID,
@@ -257,6 +262,10 @@ RETURNS TABLE (
   avatar_url TEXT,
   experience_level experience_level,
   bio TEXT,
+  github_url TEXT,
+  linkedin_url TEXT,
+  website_url TEXT,
+  available_for_hire BOOLEAN,
   skills TEXT[],
   interests TEXT[],
   match_score DOUBLE PRECISION
@@ -283,9 +292,16 @@ BEGIN
       p.avatar_url,
       dp.experience_level,
       dp.bio,
+      dp.github_url,
+      dp.linkedin_url,
+      dp.website_url,
+      dp.available_for_hire,
       array_remove(array_agg(DISTINCT s.name), NULL) as skills,
       array_remove(array_agg(DISTINCT i.name), NULL) as interests,
-      sv.search_vector,
+      setweight(to_tsvector('english', COALESCE(p.username, '')), 'A') ||
+      setweight(to_tsvector('english', COALESCE(p.full_name, '')), 'A') ||
+      setweight(to_tsvector('english', COALESCE(dp.bio, '')), 'B') ||
+      setweight(to_tsvector('english', COALESCE(dp.experience_level::text, '')), 'C') as search_vector,
       sv.skills_vector,
       sv.interests_vector
     FROM developer_profiles dp
@@ -296,10 +312,12 @@ BEGIN
     LEFT JOIN developer_interests di ON di.developer_id = dp.id
     LEFT JOIN interests i ON i.id = di.interest_id
     WHERE
-      (skill_filter IS NULL OR s.name = ANY(skill_filter))
-      AND (interest_filter IS NULL OR i.name = ANY(interest_filter))
-      AND (experience_filter IS NULL OR dp.experience_level = ANY(experience_filter))
-    GROUP BY dp.id, dp.user_id, p.username, p.full_name, p.avatar_url, dp.experience_level, dp.bio, sv.search_vector, sv.skills_vector, sv.interests_vector
+      (exclude_user_id IS NULL OR dp.user_id != exclude_user_id) AND
+      (skill_filter IS NULL OR s.name = ANY(skill_filter)) AND
+      (interest_filter IS NULL OR i.name = ANY(interest_filter)) AND
+      (experience_filter IS NULL OR dp.experience_level = ANY(experience_filter))
+    GROUP BY dp.id, dp.user_id, p.username, p.full_name, p.avatar_url, dp.experience_level, dp.bio, 
+             dp.github_url, dp.linkedin_url, dp.website_url, dp.available_for_hire, sv.skills_vector, sv.interests_vector
   )
   SELECT
     dd.id,
@@ -309,12 +327,16 @@ BEGIN
     dd.avatar_url,
     dd.experience_level,
     dd.bio,
+    dd.github_url,
+    dd.linkedin_url,
+    dd.website_url,
+    dd.available_for_hire,
     dd.skills,
     dd.interests,
     CASE 
       WHEN query_tsquery IS NULL THEN 0::DOUBLE PRECISION
       ELSE (
-        COALESCE(ts_rank(dd.search_vector, query_tsquery), 0) +
+        COALESCE(ts_rank(dd.search_vector, query_tsquery) * 2.0, 0) +  -- Double weight for profile info
         COALESCE(ts_rank(dd.skills_vector, query_tsquery), 0) +
         COALESCE(ts_rank(dd.interests_vector, query_tsquery), 0)
       )::DOUBLE PRECISION
@@ -324,7 +346,9 @@ BEGIN
     query_tsquery IS NULL OR
     dd.search_vector @@ query_tsquery OR
     dd.skills_vector @@ query_tsquery OR
-    dd.interests_vector @@ query_tsquery
+    dd.interests_vector @@ query_tsquery OR
+    dd.username ILIKE '%' || COALESCE(NULLIF(search_query, ''), '') || '%' OR
+    dd.full_name ILIKE '%' || COALESCE(NULLIF(search_query, ''), '') || '%'
   ORDER BY match_score DESC, dd.username ASC
   LIMIT page_size
   OFFSET (page_number - 1) * page_size;
@@ -485,4 +509,37 @@ BEGIN
     )
   LIMIT 20;
 END;
-$$; 
+$$;
+
+-- Create materialized view for search cache
+CREATE MATERIALIZED VIEW IF NOT EXISTS developer_search_cache AS
+SELECT
+  dp.id as developer_id,
+  p.username,
+  p.full_name,
+  dp.bio,
+  dp.experience_level,
+  dp.github_url,
+  dp.linkedin_url,
+  dp.website_url,
+  dp.available_for_hire,
+  array_agg(DISTINCT s.name) as skills,
+  array_agg(DISTINCT i.name) as interests,
+  setweight(to_tsvector('english', COALESCE(p.username, '')), 'A') ||
+  setweight(to_tsvector('english', COALESCE(p.full_name, '')), 'A') ||
+  setweight(to_tsvector('english', COALESCE(dp.bio, '')), 'B') ||
+  setweight(to_tsvector('english', COALESCE(dp.experience_level::text, '')), 'C') as search_vector,
+  setweight(to_tsvector('english', string_agg(COALESCE(s.name, ''), ' ')), 'A') as skills_vector,
+  setweight(to_tsvector('english', string_agg(COALESCE(i.name, ''), ' ')), 'B') as interests_vector
+FROM developer_profiles dp
+JOIN profiles p ON p.id = dp.user_id
+LEFT JOIN developer_skills ds ON ds.developer_id = dp.id
+LEFT JOIN skills s ON s.id = ds.skill_id
+LEFT JOIN developer_interests di ON di.developer_id = dp.id
+LEFT JOIN interests i ON i.id = di.interest_id
+GROUP BY dp.id, p.username, p.full_name, dp.bio, dp.experience_level, dp.github_url, dp.linkedin_url, dp.website_url, dp.available_for_hire;
+
+-- Create indexes on the materialized view
+CREATE INDEX IF NOT EXISTS idx_developer_search_cache_search_vector ON developer_search_cache USING gin(search_vector);
+CREATE INDEX IF NOT EXISTS idx_developer_search_cache_skills_vector ON developer_search_cache USING gin(skills_vector);
+CREATE INDEX IF NOT EXISTS idx_developer_search_cache_interests_vector ON developer_search_cache USING gin(interests_vector); 
