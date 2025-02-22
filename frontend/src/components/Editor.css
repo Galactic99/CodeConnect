@@ -1,13 +1,16 @@
 .editor-container {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   gap: 20px;
   padding: 20px;
   height: 100vh;
+  width: 100%;
   background-color: var(--bg-primary);
+  overflow: hidden;
 }
 
 .editor-card {
+  flex: 1;
   background: var(--bg-secondary);
   border-radius: 16px;
   padding: 20px;
@@ -15,6 +18,8 @@
   height: calc(100vh - 40px);
   display: flex;
   flex-direction: column;
+  min-width: 0; /* Prevent flex item from overflowing */
+  overflow: hidden;
 }
 
 .editor-header {
@@ -126,7 +131,9 @@
   font-family: 'Fira Code', 'Courier New', Courier, monospace;
   overflow-y: auto;
   max-height: 200px;
+  min-height: 100px;
   border: 2px solid var(--border-color);
+  flex-shrink: 0;
 }
 
 .output-container h3 {
@@ -176,6 +183,8 @@
 
 /* Monaco Editor Customizations */
 .monaco-editor {
+  flex: 1;
+  min-height: 0; /* Prevent flex item from overflowing */
   padding-top: 5px;
 }
 
@@ -221,4 +230,199 @@
 
 .close-chat-button:hover {
   color: var(--error-color);
+}
+
+.file-explorer {
+  width: 300px;
+  min-width: 300px;
+  background: #1e1e1e;
+  border-radius: 12px;
+  height: calc(100vh - 40px);
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #333;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.file-explorer-header {
+  padding: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 2px solid #333;
+  background: #252525;
+  min-height: 60px;
+}
+
+.file-explorer-header h3 {
+  margin: 0;
+  font-size: 16px;
+  text-transform: uppercase;
+  color: #fff;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.file-explorer-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.file-action-button {
+  background: #333;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+}
+
+.file-action-button:hover {
+  background: #444;
+  transform: translateY(-1px);
+}
+
+.file-explorer-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+.file-item {
+  font-size: 14px;
+  margin: 2px 0;
+}
+
+.file-item-header {
+  display: flex;
+  align-items: center;
+  padding: 6px 8px;
+  cursor: pointer;
+  color: #d4d4d4;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.file-item-header:hover {
+  background: #2a2d2e;
+}
+
+.file-item-header.selected {
+  background: #37373d;
+}
+
+.file-icon {
+  margin-right: 8px;
+  width: 16px;
+  height: 16px;
+}
+
+.folder-icon {
+  color: #dcb67a;
+}
+
+.file-icon {
+  color: #519aba;
+}
+
+.file-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-item-actions {
+  display: none;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.file-item-header:hover .file-item-actions {
+  display: flex;
+}
+
+.action-button,
+.delete-button {
+  padding: 2px 4px;
+  background: transparent;
+  border: none;
+  color: #cccccc;
+  cursor: pointer;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.action-button:hover {
+  background: #404040;
+  color: #ffffff;
+}
+
+.delete-button:hover {
+  background: #c42b1c;
+  color: #ffffff;
+}
+
+.folder-content {
+  margin-left: 16px;
+  border-left: 1px solid #404040;
+  margin-top: 2px;
+  margin-bottom: 2px;
+}
+
+.context-menu {
+  position: fixed;
+  background: #252526;
+  border: 1px solid #454545;
+  border-radius: 4px;
+  padding: 4px 0;
+  min-width: 160px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+}
+
+.context-menu button {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  text-align: left;
+  background: none;
+  border: none;
+  color: #cccccc;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.context-menu button:hover {
+  background: #2a2d2e;
+  color: #ffffff;
+}
+
+/* Scrollbar Styling */
+.file-explorer-content::-webkit-scrollbar {
+  width: 10px;
+}
+
+.file-explorer-content::-webkit-scrollbar-track {
+  background: #1e1e1e;
+}
+
+.file-explorer-content::-webkit-scrollbar-thumb {
+  background: #424242;
+  border-radius: 5px;
+}
+
+.file-explorer-content::-webkit-scrollbar-thumb:hover {
+  background: #4f4f4f;
 } 

@@ -9,7 +9,14 @@ import { supabase } from '../supabaseClient';
 import Chat from './Chat';
 import './Editor.css';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faTimes } from '@fortawesome/free-solid-svg-icons';
+import { 
+  faFolder, 
+  faFolderPlus, 
+  faFile, 
+  faPlus,
+  faTrash,
+  faTimes 
+} from '@fortawesome/free-solid-svg-icons';
 
 // Configure Monaco Editor with languages
 monaco.languages.typescript.javascriptDefaults.setDiagnosticsOptions({
@@ -167,6 +174,48 @@ const Editor = ({ sessionId }) => {
   const [output, setOutput] = useState('');
   const [isExecuting, setIsExecuting] = useState(false);
   const [editorContent, setEditorContent] = useState(LANGUAGE_CONFIGS.javascript.defaultCode);
+  const [fileStructure, setFileStructure] = useState({
+    type: 'folder',
+    name: 'root',
+    expanded: true,
+    children: [
+      {
+        type: 'folder',
+        name: 'src',
+        expanded: false,
+        children: [
+          {
+            type: 'file',
+            name: 'index.js',
+            content: '// Main entry point\nconsole.log("Hello from index.js");'
+          },
+          {
+            type: 'folder',
+            name: 'components',
+            expanded: false,
+            children: [
+              {
+                type: 'file',
+                name: 'App.js',
+                content: '// App component\nconsole.log("Hello from App.js");'
+              }
+            ]
+          }
+        ]
+      },
+      {
+        type: 'file',
+        name: 'README.md',
+        content: '# Project Documentation\n\nWelcome to the project!'
+      }
+    ]
+  });
+  const [showNewFileModal, setShowNewFileModal] = useState(false);
+  const [showNewFolderModal, setShowNewFolderModal] = useState(false);
+  const [newItemName, setNewItemName] = useState('');
+  const [selectedItem, setSelectedItem] = useState(null);
+  const [currentFolder, setCurrentFolder] = useState(null);
+  const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0, item: null });
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -338,8 +387,261 @@ const Editor = ({ sessionId }) => {
     }
   });
 
+  const handleCreateFile = (parentFolder) => {
+    const newFileName = prompt('Enter file name:');
+    if (!newFileName) return;
+
+    const fileExtension = newFileName.includes('.') ? '' : '.js';
+    const fullFileName = newFileName + fileExtension;
+
+    const newFile = {
+      type: 'file',
+      name: fullFileName,
+      content: LANGUAGE_CONFIGS[fileExtension.slice(1)]?.defaultCode || '',
+      parent: parentFolder
+    };
+
+    const addFileToFolder = (folder) => {
+      if (folder === parentFolder) {
+        return {
+          ...folder,
+          children: [...(folder.children || []), newFile],
+          expanded: true // Auto-expand the folder when adding a file
+        };
+      }
+      if (folder.children) {
+        return {
+          ...folder,
+          children: folder.children.map(child => 
+            child.type === 'folder' ? addFileToFolder(child) : child
+          )
+        };
+      }
+      return folder;
+    };
+
+    setFileStructure(prev => {
+      if (!parentFolder || parentFolder === prev) {
+        return {
+          ...prev,
+          children: [...(prev.children || []), newFile]
+        };
+      }
+      return addFileToFolder(prev);
+    });
+  };
+
+  const handleCreateFolder = (parentFolder) => {
+    const newFolderName = prompt('Enter folder name:');
+    if (!newFolderName) return;
+
+    const newFolder = {
+      type: 'folder',
+      name: newFolderName,
+      expanded: true,
+      children: [],
+      parent: parentFolder
+    };
+
+    const addFolderToFolder = (folder) => {
+      if (folder === parentFolder) {
+        return {
+          ...folder,
+          children: [...(folder.children || []), newFolder],
+          expanded: true // Auto-expand the folder when adding a subfolder
+        };
+      }
+      if (folder.children) {
+        return {
+          ...folder,
+          children: folder.children.map(child => 
+            child.type === 'folder' ? addFolderToFolder(child) : child
+          )
+        };
+      }
+      return folder;
+    };
+
+    setFileStructure(prev => {
+      if (!parentFolder || parentFolder === prev) {
+        return {
+          ...prev,
+          children: [...(prev.children || []), newFolder]
+        };
+      }
+      return addFolderToFolder(prev);
+    });
+  };
+
+  const handleDelete = (item) => {
+    if (selectedItem === item) {
+      setSelectedItem(null);
+      setEditorContent('');
+    }
+
+    const deleteFromFolder = (folder) => {
+      if (folder.children) {
+        return {
+          ...folder,
+          children: folder.children
+            .filter(child => child !== item)
+            .map(child => child.type === 'folder' ? deleteFromFolder(child) : child)
+        };
+      }
+      return folder;
+    };
+
+    setFileStructure(prev => deleteFromFolder(prev));
+  };
+
+  const toggleFolder = (folder) => {
+    const toggleFolderInStructure = (node) => {
+      if (node === folder) {
+        return {
+          ...node,
+          expanded: !node.expanded
+        };
+      }
+      if (node.type === 'folder' && node.children) {
+        return {
+          ...node,
+          children: node.children.map(child => toggleFolderInStructure(child))
+        };
+      }
+      return node;
+    };
+
+    setFileStructure(prev => toggleFolderInStructure(prev));
+  };
+
+  // Add click handler for files
+  const handleFileClick = (file) => {
+    setSelectedItem(file);
+    setEditorContent(file.content || '');
+    const fileExtension = file.name.split('.').pop();
+    if (LANGUAGE_CONFIGS[fileExtension]) {
+      setLanguage(fileExtension);
+    }
+  };
+
+  const handleContextMenu = (event, item) => {
+    event.preventDefault();
+    setContextMenu({ visible: true, x: event.pageX, y: event.pageY, item });
+  };
+
+  const handleCloseContextMenu = () => {
+    setContextMenu({ ...contextMenu, visible: false });
+  };
+
+  const handleDeleteContextMenu = () => {
+    handleDelete(contextMenu.item);
+    handleCloseContextMenu();
+  };
+
+  const renderContextMenu = () => {
+    if (!contextMenu.visible) return null;
+    return (
+      <div className="context-menu" style={{ top: contextMenu.y, left: contextMenu.x }}>
+        <button onClick={handleDeleteContextMenu}>Delete</button>
+        <button onClick={() => handleCreateFile(contextMenu.item)}>New File</button>
+        <button onClick={() => handleCreateFolder(contextMenu.item)}>New Folder</button>
+      </div>
+    );
+  };
+
+  const renderFileStructure = (node) => {
+    return (
+      <div key={node.name} className={`file-item ${selectedItem === node ? 'selected' : ''}`}> 
+        <div 
+          className={`file-item-header ${selectedItem === node ? 'selected' : ''}`}
+          onClick={() => {
+            if (node.type === 'file') {
+              handleFileClick(node);
+            } else {
+              toggleFolder(node);
+            }
+          }}
+          onContextMenu={(e) => handleContextMenu(e, node)}
+        >
+          <FontAwesomeIcon 
+            icon={node.type === 'folder' ? faFolder : faFile} 
+            className={`file-icon ${node.type}-icon`}
+          />
+          <span className="file-name">{node.name}</span>
+          <div className="file-item-actions">
+            {node.type === 'folder' && (
+              <>
+                <button 
+                  className="action-button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleCreateFile(node);
+                  }}
+                  title="New File"
+                >
+                  <FontAwesomeIcon icon={faPlus} />
+                </button>
+                <button 
+                  className="action-button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleCreateFolder(node);
+                  }}
+                  title="New Folder"
+                >
+                  <FontAwesomeIcon icon={faFolderPlus} />
+                </button>
+              </>
+            )}
+            <button 
+              className="delete-button"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDelete(node);
+              }}
+              title="Delete"
+            >
+              <FontAwesomeIcon icon={faTrash} />
+            </button>
+          </div>
+        </div>
+        {node.type === 'folder' && node.expanded && (
+          <div className="folder-content">
+            {node.children.map(renderFileStructure)}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="editor-container">
+      {renderContextMenu()}
+      <div className="file-explorer">
+        <div className="file-explorer-header">
+          <h3>Explorer</h3>
+          <div className="file-explorer-actions">
+            <button 
+              className="file-action-button"
+              onClick={() => handleCreateFile(fileStructure)}
+              title="New File"
+            >
+              <FontAwesomeIcon icon={faPlus} />
+            </button>
+            <button 
+              className="file-action-button"
+              onClick={() => handleCreateFolder(fileStructure)}
+              title="New Folder"
+            >
+              <FontAwesomeIcon icon={faFolderPlus} />
+            </button>
+          </div>
+        </div>
+        <div className="file-explorer-content">
+          {fileStructure.children.map(renderFileStructure)}
+        </div>
+      </div>
+
       <div className="editor-card">
         <div className="editor-header">
           <h2>Code Editor</h2>
@@ -355,12 +657,8 @@ const Editor = ({ sessionId }) => {
             ))}
           </select>
           <div className="button-container">
-            <button className="chat-toggle-button" onClick={toggleChat}>
-              Chat
-            </button>
-            <button className="copy-session-button" onClick={copySessionId}>
-              Copy Session ID
-            </button>
+            <button className="chat-toggle-button" onClick={toggleChat}>Chat</button>
+            <button className="copy-session-button" onClick={copySessionId}>Copy Session ID</button>
             <button 
               className="run-button" 
               onClick={runCode}
@@ -404,6 +702,7 @@ const Editor = ({ sessionId }) => {
           </pre>
         </div>
       </div>
+
       {isChatOpen && provider && currentUser && (
         <div className="chat-popup">
           <div className="chat-header">
