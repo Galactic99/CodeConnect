@@ -33,28 +33,94 @@ const Settings = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('No user found');
 
+      // Try to fetch the profile with joined developer_profiles data
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select(`
-          *,
+          id,
+          username,
+          full_name,
+          avatar_url,
+          bio,
+          experience_level,
+          github_url,
+          linkedin_url,
+          website_url,
+          available_for_hire,
+          created_at,
+          updated_at,
           developer_profiles (
+            id,
             experience_level,
             bio,
             github_url,
             linkedin_url,
             website_url,
-            available_for_hire
+            available_for_hire,
+            avatar_url
           )
         `)
         .eq('id', user.id)
         .single();
 
-      if (profileError) throw profileError;
+      if (profileError && profileError.code === 'PGRST116') {
+        // Create initial profile if it doesn't exist
+        const timestamp = new Date().toISOString();
+        const newProfile = {
+          id: user.id,
+          username: `user_${user.id.slice(0, 8)}`,
+          full_name: '',
+          avatar_url: '',
+          bio: '',
+          created_at: timestamp,
+          updated_at: timestamp
+        };
 
-      setProfile({
-        ...profileData,
-        ...profileData.developer_profiles?.[0],
-      });
+        const { data: createdProfile, error: createError } = await supabase
+          .from('profiles')
+          .insert([newProfile])
+          .select()
+          .single();
+
+        if (createError) throw createError;
+
+        // Create initial developer profile
+        const newDevProfile = {
+          user_id: user.id,
+          experience_level: 'Beginner',
+          bio: '',
+          github_url: '',
+          linkedin_url: '',
+          website_url: '',
+          avatar_url: '',
+          available_for_hire: true,
+          created_at: timestamp,
+          updated_at: timestamp
+        };
+
+        const { error: devProfileError } = await supabase
+          .from('developer_profiles')
+          .insert([newDevProfile]);
+
+        if (devProfileError) throw devProfileError;
+
+        // Set the initial profile state
+        setProfile({
+          ...newProfile,
+          ...newDevProfile
+        });
+      } else if (profileError) {
+        throw profileError;
+      } else {
+        // Merge profile and developer profile data
+        const mergedProfile = {
+          ...profileData,
+          ...(profileData.developer_profiles?.[0] || {}),
+        };
+        
+        // Update the state with merged data
+        setProfile(mergedProfile);
+      }
     } catch (error) {
       console.error('Error fetching profile:', error);
       setError('Failed to load profile');
@@ -73,39 +139,101 @@ const Settings = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('No user found');
 
+      const timestamp = new Date().toISOString();
+
+      // Prepare updates for profiles table
+      const profileUpdates = {
+        username: profile.username,
+        full_name: profile.full_name,
+        avatar_url: profile.avatar_url,
+        bio: profile.bio,
+        experience_level: profile.experience_level,
+        github_url: profile.github_url,
+        linkedin_url: profile.linkedin_url,
+        website_url: profile.website_url,
+        available_for_hire: profile.available_for_hire,
+        updated_at: timestamp
+      };
+
+      // Log the updates for debugging
+      console.log('Updating profiles table with:', profileUpdates);
+
       // Update profiles table
       const { error: profileError } = await supabase
         .from('profiles')
-        .update({
-          username: profile.username,
-          full_name: profile.full_name,
-          avatar_url: profile.avatar_url,
-          updated_at: new Date().toISOString()
-        })
+        .update(profileUpdates)
         .eq('id', user.id);
 
-      if (profileError) throw profileError;
+      if (profileError) {
+        console.error('Profile update error:', profileError);
+        throw new Error('Failed to update profile information');
+      }
 
-      // Update or insert developer_profiles
-      const { error: devProfileError } = await supabase
+      // Prepare updates for developer_profiles table
+      const devProfileUpdates = {
+        bio: profile.bio,
+        experience_level: profile.experience_level || 'Beginner',
+        github_url: profile.github_url || '',
+        linkedin_url: profile.linkedin_url || '',
+        website_url: profile.website_url || '',
+        available_for_hire: profile.available_for_hire,
+        avatar_url: profile.avatar_url,
+        updated_at: timestamp
+      };
+
+      // Log the updates for debugging
+      console.log('Updating developer_profiles table with:', devProfileUpdates);
+
+      // Check if developer profile exists
+      const { data: existingDevProfile, error: checkError } = await supabase
         .from('developer_profiles')
-        .upsert({
-          user_id: user.id,
-          experience_level: profile.experience_level,
-          bio: profile.bio,
-          github_url: profile.github_url,
-          linkedin_url: profile.linkedin_url,
-          website_url: profile.website_url,
-          available_for_hire: profile.available_for_hire,
-          updated_at: new Date().toISOString()
-        });
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
 
-      if (devProfileError) throw devProfileError;
+      if (checkError && checkError.code !== 'PGRST116') {
+        throw checkError; // Handle other errors
+      }
 
+      if (existingDevProfile) {
+        // Update existing developer profile
+        const { error: updateError } = await supabase
+          .from('developer_profiles')
+          .update(devProfileUpdates)
+          .eq('user_id', user.id);
+
+        if (updateError) {
+          console.error('Developer profile update error:', updateError);
+          throw new Error('Failed to update developer profile');
+        }
+      } else {
+        // Create new developer profile
+        const { error: insertError } = await supabase
+          .from('developer_profiles')
+          .insert({
+            user_id: user.id,
+            ...devProfileUpdates,
+            created_at: timestamp
+          });
+
+        if (insertError) {
+          console.error('Developer profile insert error:', insertError);
+          throw new Error('Failed to create developer profile');
+        }
+      }
+
+      // Refresh the profile data to ensure UI is in sync
+      await fetchProfile();
       setSuccess('Profile updated successfully');
     } catch (error) {
       console.error('Error updating profile:', error);
-      setError('Failed to update profile');
+      if (error.message.includes('duplicate key')) {
+        setError('A user with this username already exists. Please choose a different username.');
+      } else if (error.message.includes('not-null')) {
+        setError('Please fill in all required fields.');
+      } else {
+        setError(error.message || 'Failed to update profile. Please try again.');
+      }
     } finally {
       setSaving(false);
     }
