@@ -39,6 +39,17 @@ function App() {
     document.documentElement.setAttribute('data-theme', newTheme);
   };
 
+  const handleLogout = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      // The session will be automatically cleared and the user redirected
+      // to the login page due to the auth state change listener
+    } catch (error) {
+      console.error('Error logging out:', error.message);
+    }
+  };
+
   if (!session) {
     return <Auth />;
   }
@@ -70,6 +81,13 @@ function App() {
                 aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
               >
                 {theme === 'light' ? '🌙' : '☀️'}
+              </button>
+              <button 
+                onClick={handleLogout}
+                className="btn btn-ghost logout-button"
+                aria-label="Logout"
+              >
+                Logout
               </button>
             </div>
           </div>
