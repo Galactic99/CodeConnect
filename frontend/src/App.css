@@ -225,6 +225,62 @@
   white-space: nowrap;
 }
 
+.glowing-button-container {
+  text-align: center;
+  margin: 4rem 0;
+  padding: 1rem;
+  position: relative;
+}
+
+.glowing-button {
+  position: relative;
+  display: inline-block;
+  padding: 20px 40px;
+  font-size: 1.8rem;
+  font-weight: bold;
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+  border-radius: 15px;
+  text-decoration: none;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  box-shadow: 0 0 20px rgba(0, 123, 255, 0.5);
+  z-index: 1;
+}
+
+.glowing-button::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background: linear-gradient(45deg, rgba(0, 123, 255, 0.5), rgba(0, 123, 255, 0.8));
+  border-radius: 15px;
+  z-index: -1;
+  animation: glowing 3s linear infinite;
+  filter: blur(10px);
+  opacity: 0.8;
+}
+
+.glowing-button:hover {
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 0 0 30px rgba(0, 123, 255, 0.7);
+}
+
+.glowing-button:hover::before {
+  animation: glowing 1.5s linear infinite;
+  filter: blur(15px);
+  opacity: 1;
+}
+
+@keyframes glowing {
+  0% { background-position: 0 0; }
+  50% { background-position: 400% 0; }
+  100% { background-position: 0 0; }
+}
+
+/* Add responsive styles for the glowing button */
 @media (max-width: 768px) {
   .nav-content {
     flex-direction: column;
@@ -271,5 +327,14 @@
 
   .join-session-container .btn {
     width: 100%;
+  }
+
+  .glowing-button {
+    font-size: 1.4rem;
+    padding: 15px 30px;
+  }
+  
+  .glowing-button-container {
+    margin: 3rem 0;
   }
 } 

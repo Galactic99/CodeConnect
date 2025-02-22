@@ -111,6 +111,13 @@ function App() {
                   </Link>
                 </div>
                 
+                <div className="glowing-button-container">
+                  <Link to="/match" className="glowing-button">
+                    Find Your Match
+                    <span className="glowing-border"></span>
+                  </Link>
+                </div>
+
                 <div className="features-grid">
                   <div className="feature-card card">
                     <h3>Find Collaborators</h3>
