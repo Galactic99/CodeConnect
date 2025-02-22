@@ -7,6 +7,7 @@ import {
   sendFriendRequest,
   respondToFriendRequest
 } from '../lib/supabase';
+import './Profile.css';
 
 const Profile = () => {
   const { id } = useParams();
@@ -15,124 +16,61 @@ const Profile = () => {
   const [friends, setFriends] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [isEditing, setIsEditing] = useState(false);
-  const [editForm, setEditForm] = useState({
-    username: '',
-    full_name: '',
-    bio: ''
-  });
   const [currentUser, setCurrentUser] = useState(null);
   const [friendshipStatus, setFriendshipStatus] = useState('not_friend');
+  const [activeTab, setActiveTab] = useState('overview'); // 'overview', 'projects', 'activity'
 
   useEffect(() => {
-    const loadProfileData = async () => {
-      console.log('Loading profile for user ID:', id); // Debug log
-      try {
-        setIsLoading(true);
-        setError(null);
-
-        // Get current user
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
-        if (userError) throw userError;
-        if (!user) {
-          navigate('/');
-          return;
-        }
-        setCurrentUser(user);
-
-        // Get profile data
-        const profileData = await getProfile(id);
-        console.log('Profile data fetched:', profileData); // Debug log
-        setProfile(profileData);
-        
-        if (profileData) {
-          setEditForm({
-            username: profileData.username || '',
-            full_name: profileData.full_name || '',
-            bio: profileData.bio || ''
-          });
-
-          // Load friends if viewing own profile
-          if (user.id === id) {
-            const friendsData = await getFriends();
-            setFriends(friendsData || []);
-          }
-
-          // Check friendship status
-          const { data: friendshipData } = await supabase
-            .from('friendships')
-            .select('*')
-            .or(`user_id.eq.${user.id},friend_id.eq.${user.id}`)
-            .or(`user_id.eq.${id},friend_id.eq.${id}`)
-            .single();
-
-          if (friendshipData) {
-            setFriendshipStatus('friend');
-          } else {
-            // Check for friend requests
-            const { data: requestData } = await supabase
-              .from('friend_requests')
-              .select('*')
-              .or(`sender_id.eq.${user.id}.and.receiver_id.eq.${id},sender_id.eq.${id}.and.receiver_id.eq.${user.id}`)
-              .eq('status', 'pending')
-              .single();
-
-            if (requestData) {
-              setFriendshipStatus(requestData.sender_id === user.id ? 'request_sent' : 'request_received');
-            }
-          }
-        }
-      } catch (err) {
-        console.error('Error loading profile:', err);
-        setError('Failed to load profile');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     loadProfileData();
-  }, [id, navigate]);
+  }, [id]);
 
-  const handleEdit = async (e) => {
-    e.preventDefault();
+  const loadProfileData = async () => {
     try {
+      setIsLoading(true);
       setError(null);
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update(editForm)
-        .eq('id', currentUser.id);
 
-      if (updateError) throw updateError;
+      // Get current user
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError) throw userError;
+      if (!user) {
+        navigate('/');
+        return;
+      }
+      setCurrentUser(user);
+
+      // Get profile data
+      const profileData = await getProfile(id);
+      setProfile(profileData);
       
-      setProfile({ ...profile, ...editForm });
-      setIsEditing(false);
+      // Load friends if viewing own profile
+      if (user.id === id) {
+        const friendsData = await getFriends();
+        setFriends(friendsData || []);
+      }
     } catch (error) {
-      console.error('Error updating profile:', error);
-      setError('Failed to update profile');
+      console.error('Error loading profile:', error);
+      setError('Failed to load profile');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleConnect = async () => {
     try {
-      setError(null);
       await sendFriendRequest(id);
-      setFriendshipStatus('request_sent'); // Update status to reflect the sent request
-    } catch (err) {
-      console.error('Error sending friend request:', err);
+      setFriendshipStatus('request_sent');
+    } catch (error) {
+      console.error('Error sending friend request:', error);
       setError('Failed to send friend request');
     }
   };
 
   const handleAcceptRequest = async () => {
     try {
-      setError(null);
       await respondToFriendRequest(id, true);
       setFriendshipStatus('friend');
-      // Refresh friends list
-      const friendsData = await getFriends();
-      setFriends(friendsData || []);
-    } catch (err) {
-      console.error('Error accepting friend request:', err);
+    } catch (error) {
+      console.error('Error accepting friend request:', error);
       setError('Failed to accept friend request');
     }
   };
@@ -144,18 +82,24 @@ const Profile = () => {
   if (isLoading) {
     return (
       <div className="profile-container">
-        <div className="profile-box">
-          <div className="loading">Loading profile...</div>
+        <div className="loading-spinner">
+          <div className="spinner"></div>
+          <span>Loading profile...</span>
         </div>
       </div>
     );
   }
 
-  if (!profile) {
+  if (error) {
     return (
       <div className="profile-container">
-        <div className="profile-box">
-          <div className="error-message">Profile not found</div>
+        <div className="error-container">
+          <i className="fas fa-exclamation-circle"></i>
+          <h2>Error Loading Profile</h2>
+          <p>{error}</p>
+          <button className="btn-primary" onClick={() => navigate('/')}>
+            Return to Home
+          </button>
         </div>
       </div>
     );
@@ -165,108 +109,199 @@ const Profile = () => {
 
   return (
     <div className="profile-container">
-      <div className="profile-box">
-        {error && <div className="error-message">{error}</div>}
-        
-        <div className="profile-header">
+      <div className="profile-header">
+        <div className="profile-cover">
           <div className="profile-avatar">
-            {profile.avatar_url ? (
+            {profile?.avatar_url ? (
               <img src={profile.avatar_url} alt={profile.username} />
             ) : (
               <div className="avatar-placeholder">
-                {profile.username?.[0]?.toUpperCase()}
+                {profile?.username?.[0]?.toUpperCase()}
               </div>
             )}
           </div>
-          
-          <div className="profile-info">
-            <h1>{profile.username}</h1>
-            {profile.full_name && <h2>{profile.full_name}</h2>}
-            {profile.bio && <p className="bio">{profile.bio}</p>}
-            
-            <div className="skills-section">
-              <h3>Skills</h3>
-              {profile.skills && profile.skills.length > 0 ? (
-                <ul className="skills-list">
-                  {profile.skills.map((skill, index) => (
-                    <li key={index} className="skill-item">{skill}</li>
-                  ))}
-                </ul>
-              ) : (
-                <p>No skills added yet.</p>
+        </div>
+        
+        <div className="profile-info">
+          <div className="profile-name-section">
+            <h1>{profile?.username}</h1>
+            {profile?.full_name && <h2>{profile.full_name}</h2>}
+            <div className="profile-badges">
+              {profile?.experience_level && (
+                <span className="badge experience-badge">
+                  <i className="fas fa-code"></i>
+                  {profile.experience_level}
+                </span>
               )}
-            </div>
-            
-            <div className="profile-actions">
-              {isOwnProfile ? (
-                <button
-                  className="action-button primary"
-                  onClick={() => navigate('/settings')}
-                >
-                  Edit Profile
-                </button>
-              ) : (
-                <>
-                  {friendshipStatus === 'not_friend' && (
-                    <button
-                      className="action-button primary"
-                      onClick={handleConnect}
-                    >
-                      Connect
-                    </button>
-                  )}
-                  {friendshipStatus === 'friend' && (
-                    <button
-                      className="action-button"
-                      onClick={handleMessage}
-                    >
-                      Message
-                    </button>
-                  )}
-                  {friendshipStatus === 'request_sent' && (
-                    <span className="status-text">Request Sent</span>
-                  )}
-                  {friendshipStatus === 'request_received' && (
-                    <button
-                      className="action-button primary"
-                      onClick={handleAcceptRequest}
-                    >
-                      Accept Request
-                    </button>
-                  )}
-                </>
+              {profile?.available_for_hire && (
+                <span className="badge hire-badge">
+                  <i className="fas fa-briefcase"></i>
+                  Available for Hire
+                </span>
               )}
             </div>
           </div>
-        </div>
 
-        {isOwnProfile && friends.length > 0 && (
-          <div className="profile-friends">
-            <h3>Friends</h3>
-            <div className="friends-grid">
-              {friends.map((friend) => (
-                <div key={friend.id} className="friend-card" onClick={() => navigate(`/profile/${friend.id}`)}>
-                  <div className="friend-avatar">
-                    {friend.avatar_url ? (
-                      <img src={friend.avatar_url} alt={friend.username} />
-                    ) : (
-                      <div className="avatar-placeholder">
-                        {friend.username[0].toUpperCase()}
-                      </div>
-                    )}
-                  </div>
-                  <span className="friend-name">{friend.username}</span>
-                </div>
-              ))}
+          <div className="profile-actions">
+            {isOwnProfile ? (
+              <button
+                className="btn-primary"
+                onClick={() => navigate('/settings')}
+              >
+                <i className="fas fa-edit"></i>
+                Edit Profile
+              </button>
+            ) : (
+              <div className="action-buttons">
+                {friendshipStatus === 'not_friend' && (
+                  <button
+                    className="btn-primary"
+                    onClick={handleConnect}
+                  >
+                    <i className="fas fa-user-plus"></i>
+                    Connect
+                  </button>
+                )}
+                {friendshipStatus === 'friend' && (
+                  <button
+                    className="btn-secondary"
+                    onClick={handleMessage}
+                  >
+                    <i className="fas fa-comment"></i>
+                    Message
+                  </button>
+                )}
+                {friendshipStatus === 'request_sent' && (
+                  <span className="status-text">
+                    <i className="fas fa-clock"></i>
+                    Request Sent
+                  </span>
+                )}
+                {friendshipStatus === 'request_received' && (
+                  <button
+                    className="btn-primary"
+                    onClick={handleAcceptRequest}
+                  >
+                    <i className="fas fa-check"></i>
+                    Accept Request
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="profile-tabs">
+        <button
+          className={`tab ${activeTab === 'overview' ? 'active' : ''}`}
+          onClick={() => setActiveTab('overview')}
+        >
+          <i className="fas fa-user"></i>
+          Overview
+        </button>
+        <button
+          className={`tab ${activeTab === 'projects' ? 'active' : ''}`}
+          onClick={() => setActiveTab('projects')}
+        >
+          <i className="fas fa-project-diagram"></i>
+          Projects
+        </button>
+        <button
+          className={`tab ${activeTab === 'activity' ? 'active' : ''}`}
+          onClick={() => setActiveTab('activity')}
+        >
+          <i className="fas fa-chart-line"></i>
+          Activity
+        </button>
+      </div>
+
+      <div className="profile-content">
+        {activeTab === 'overview' && (
+          <>
+            <div className="profile-section">
+              <h3>About</h3>
+              <p className="bio">{profile?.bio || 'No bio available'}</p>
             </div>
+
+            <div className="profile-section">
+              <h3>Skills</h3>
+              <div className="skills-grid">
+                {profile?.skills && profile.skills.length > 0 ? (
+                  profile.skills.map((skill, index) => (
+                    <div key={index} className="skill-card">
+                      <div className="skill-header">
+                        <span className="skill-name">{skill.name}</span>
+                        {skill.category && (
+                          <span className="skill-category">{skill.category}</span>
+                        )}
+                      </div>
+                      <div className="skill-proficiency">
+                        {Array.from({ length: 5 }).map((_, i) => (
+                          <i
+                            key={i}
+                            className={`fas fa-star ${
+                              i < skill.proficiency ? 'filled' : ''
+                            }`}
+                          ></i>
+                        ))}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p className="empty-state">No skills added yet</p>
+                )}
+              </div>
+            </div>
+
+            {isOwnProfile && friends.length > 0 && (
+              <div className="profile-section">
+                <h3>Friends</h3>
+                <div className="friends-grid">
+                  {friends.map((friend) => (
+                    <div
+                      key={friend.id}
+                      className="friend-card"
+                      onClick={() => navigate(`/profile/${friend.id}`)}
+                    >
+                      <div className="friend-avatar">
+                        {friend.avatar_url ? (
+                          <img src={friend.avatar_url} alt={friend.username} />
+                        ) : (
+                          <div className="avatar-placeholder">
+                            {friend.username[0].toUpperCase()}
+                          </div>
+                        )}
+                      </div>
+                      <div className="friend-info">
+                        <span className="friend-name">{friend.username}</span>
+                        {friend.experience_level && (
+                          <span className="friend-level">
+                            {friend.experience_level}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
+        {activeTab === 'projects' && (
+          <div className="profile-section">
+            <h3>Projects</h3>
+            <p className="empty-state">Projects feature coming soon...</p>
           </div>
         )}
 
-        <div className="settings-footer">
-          <button className="back-button" onClick={() => navigate('/')}>
-            Back to Home
-          </button>
-        </div>
+        {activeTab === 'activity' && (
+          <div className="profile-section">
+            <h3>Recent Activity</h3>
+            <p className="empty-state">Activity tracking coming soon...</p>
+          </div>
+        )}
       </div>
     </div>
   );

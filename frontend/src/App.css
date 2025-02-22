@@ -197,6 +197,20 @@
   box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
 }
 
+.logout-button {
+  background-color: var(--error-bg);
+  color: var(--error-text);
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  transition: all 0.2s ease;
+}
+
+.logout-button:hover {
+  background-color: var(--error-text);
+  color: white;
+  transform: translateY(-2px);
+}
+
 @media (max-width: 768px) {
   .nav-content {
     flex-direction: column;
@@ -207,6 +221,12 @@
   .nav-links {
     flex-wrap: wrap;
     justify-content: center;
+    gap: 0.5rem;
+  }
+
+  .logout-button {
+    width: 100%;
+    margin-top: 0.5rem;
   }
 
   .home-container {

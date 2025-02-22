@@ -21,18 +21,86 @@ CREATE TABLE IF NOT EXISTS profiles (
 -- Create a trigger to automatically create a profile when a new user signs up
 CREATE OR REPLACE FUNCTION create_profile_for_user()
 RETURNS TRIGGER AS $$
+DECLARE
+  dev_profile_id UUID;
+  username_val TEXT;
+  full_name_val TEXT;
 BEGIN
-  INSERT INTO profiles (id, username, full_name)
+  -- Extract username and full_name from metadata
+  username_val := COALESCE(
+    NEW.raw_user_meta_data->>'username',
+    SPLIT_PART(NEW.email, '@', 1),
+    'user_' || SUBSTR(NEW.id::text, 1, 8)
+  );
+  full_name_val := COALESCE(NEW.raw_user_meta_data->>'full_name', '');
+
+  -- Create the basic profile first
+  INSERT INTO public.profiles (
+    id,
+    username,
+    full_name,
+    avatar_url,
+    bio,
+    created_at,
+    updated_at
+  )
   VALUES (
     NEW.id,
-    COALESCE(NEW.raw_user_meta_data->>'username', 'user_' || SUBSTR(NEW.id::text, 1, 8)),
-    COALESCE(NEW.raw_user_meta_data->>'full_name', '')
+    username_val,
+    full_name_val,
+    '',
+    '',
+    NOW(),
+    NOW()
   );
+
+  -- Create developer profile
+  INSERT INTO public.developer_profiles (
+    user_id,
+    experience_level,
+    bio,
+    available_for_hire,
+    created_at,
+    updated_at
+  )
+  VALUES (
+    NEW.id,
+    'Beginner',
+    '',
+    true,
+    NOW(),
+    NOW()
+  )
+  RETURNING id INTO dev_profile_id;
+
+  -- Initialize search vectors
+  INSERT INTO public.search_vectors (
+    developer_id,
+    search_vector,
+    skills_vector,
+    interests_vector
+  )
+  VALUES (
+    dev_profile_id,
+    setweight(to_tsvector('english', COALESCE(username_val, '')), 'A'),
+    to_tsvector('english', ''),
+    to_tsvector('english', '')
+  );
+
+  RETURN NEW;
+EXCEPTION WHEN OTHERS THEN
+  -- Log the error and details
+  RAISE LOG 'Error in create_profile_for_user for user %: %, SQLSTATE: %', NEW.id, SQLERRM, SQLSTATE;
+  -- Continue with the transaction
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
-CREATE OR REPLACE TRIGGER create_profile_on_signup
+-- Drop existing trigger if it exists
+DROP TRIGGER IF EXISTS create_profile_on_signup ON auth.users;
+
+-- Create the trigger
+CREATE TRIGGER create_profile_on_signup
   AFTER INSERT ON auth.users
   FOR EACH ROW
   EXECUTE FUNCTION create_profile_for_user();
@@ -268,15 +336,61 @@ ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE friendships ENABLE ROW LEVEL SECURITY;
 ALTER TABLE friend_requests ENABLE ROW LEVEL SECURITY;
 ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE developer_profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE search_vectors ENABLE ROW LEVEL SECURITY;
+
+-- Grant trigger function necessary permissions
+GRANT USAGE ON SCHEMA public TO postgres, authenticated, anon;
+GRANT ALL ON ALL TABLES IN SCHEMA public TO postgres;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO postgres;
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO anon;
+GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA public TO authenticated;
+GRANT USAGE ON ALL SEQUENCES IN SCHEMA public TO authenticated;
 
 -- Profiles policies
 CREATE POLICY "Public profiles are viewable by everyone"
   ON profiles FOR SELECT
   USING (true);
 
+CREATE POLICY "Users can insert their own profile"
+  ON profiles FOR INSERT
+  WITH CHECK (auth.uid() = id OR auth.role() = 'service_role');
+
 CREATE POLICY "Users can update their own profile"
   ON profiles FOR UPDATE
   USING (auth.uid() = id);
+
+-- Developer profiles policies
+CREATE POLICY "Public developer profiles are viewable by everyone"
+  ON developer_profiles FOR SELECT
+  USING (true);
+
+CREATE POLICY "Users can insert their own developer profile"
+  ON developer_profiles FOR INSERT
+  WITH CHECK (auth.uid() = user_id OR auth.role() = 'service_role');
+
+CREATE POLICY "Users can update their own developer profile"
+  ON developer_profiles FOR UPDATE
+  USING (auth.uid() = user_id);
+
+-- Search vectors policies
+CREATE POLICY "Public search vectors are viewable by everyone"
+  ON search_vectors FOR SELECT
+  USING (true);
+
+CREATE POLICY "Search vectors can be inserted for own profile"
+  ON search_vectors FOR INSERT
+  WITH CHECK (EXISTS (
+    SELECT 1 FROM developer_profiles dp
+    WHERE dp.id = developer_id AND (dp.user_id = auth.uid() OR auth.role() = 'service_role')
+  ));
+
+CREATE POLICY "Search vectors can be updated for own profile"
+  ON search_vectors FOR UPDATE
+  USING (EXISTS (
+    SELECT 1 FROM developer_profiles dp
+    WHERE dp.id = developer_id AND dp.user_id = auth.uid()
+  ));
 
 -- Friendships policies
 CREATE POLICY "Users can view their own friendships"
