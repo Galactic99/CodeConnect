@@ -1,0 +1,340 @@
+.friends-container {
+  max-width: 1000px;
+  margin: 2rem auto;
+  padding: 2rem;
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.friends-header {
+  margin-bottom: 2.5rem;
+  text-align: center;
+  position: relative;
+}
+
+.friends-header:after {
+  content: '';
+  position: absolute;
+  bottom: -1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60px;
+  height: 4px;
+  background: var(--accent-primary);
+  border-radius: 2px;
+}
+
+.friends-header h2 {
+  color: var(--text-primary);
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+  letter-spacing: -0.025em;
+}
+
+.friends-header p {
+  color: var(--text-tertiary);
+  font-size: 1.1rem;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.friends-tabs {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  border-bottom: 2px solid var(--border-color);
+  padding-bottom: 1rem;
+}
+
+.tab-button {
+  padding: 0.75rem 1.5rem;
+  background: transparent;
+  border: none;
+  color: var(--text-tertiary);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.tab-button:after {
+  content: '';
+  position: absolute;
+  bottom: -1rem;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: var(--accent-primary);
+  transform: scaleX(0);
+  transition: transform 0.2s ease;
+}
+
+.tab-button:hover {
+  color: var(--text-primary);
+}
+
+.tab-button.active {
+  color: var(--accent-primary);
+}
+
+.tab-button.active:after {
+  transform: scaleX(1);
+}
+
+.friends-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.friend-card {
+  background: var(--bg-secondary);
+  border-radius: 12px;
+  padding: 1.5rem;
+  border: 1px solid var(--border-color);
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.friend-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.friend-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.friend-avatar {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--border-color);
+  transition: all 0.2s ease;
+}
+
+.friend-avatar:hover {
+  border-color: var(--accent-primary);
+  transform: scale(1.05);
+}
+
+.friend-info h3 {
+  color: var(--text-primary);
+  font-size: 1.2rem;
+  margin: 0;
+  margin-bottom: 0.25rem;
+}
+
+.friend-info p {
+  color: var(--text-tertiary);
+  font-size: 0.95rem;
+  margin: 0;
+}
+
+.friend-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0.75rem;
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  border-radius: 9999px;
+  font-size: 0.875rem;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.status-dot.online {
+  background: var(--success-text);
+}
+
+.status-dot.offline {
+  background: var(--text-tertiary);
+}
+
+.friend-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: auto;
+}
+
+.friend-actions button {
+  flex: 1;
+  padding: 0.75rem;
+  border-radius: 8px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.message-button {
+  background: var(--accent-primary);
+  color: white;
+  border: none;
+}
+
+.message-button:hover {
+  background: var(--accent-secondary);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+}
+
+.remove-button {
+  background: transparent;
+  color: var(--error-text);
+  border: 1px solid var(--error-border);
+}
+
+.remove-button:hover {
+  background: var(--error-bg);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+}
+
+.friend-requests {
+  display: grid;
+  gap: 1rem;
+}
+
+.request-card {
+  background: var(--bg-secondary);
+  border-radius: 12px;
+  padding: 1.25rem;
+  border: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  transition: all 0.2s ease;
+}
+
+.request-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+}
+
+.request-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 0.75rem;
+}
+
+.accept-button {
+  background: var(--success-bg);
+  color: var(--success-text);
+  border: 1px solid var(--success-border);
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.accept-button:hover {
+  background: var(--success-text);
+  color: white;
+  transform: translateY(-2px);
+}
+
+.decline-button {
+  background: var(--error-bg);
+  color: var(--error-text);
+  border: 1px solid var(--error-border);
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.decline-button:hover {
+  background: var(--error-text);
+  color: white;
+  transform: translateY(-2px);
+}
+
+.empty-state {
+  text-align: center;
+  padding: 3rem;
+  color: var(--text-tertiary);
+}
+
+.empty-state h3 {
+  color: var(--text-primary);
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.empty-state p {
+  color: var(--text-tertiary);
+  margin-bottom: 2rem;
+}
+
+.search-friends {
+  margin-bottom: 2rem;
+}
+
+.search-friends input {
+  width: 100%;
+  padding: 1rem;
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  transition: all 0.2s ease;
+}
+
+.search-friends input:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+}
+
+@media (max-width: 768px) {
+  .friends-container {
+    margin: 1rem;
+    padding: 1rem;
+  }
+
+  .friends-header h2 {
+    font-size: 1.75rem;
+  }
+
+  .friends-tabs {
+    overflow-x: auto;
+    padding-bottom: 0.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .tab-button {
+    padding: 0.5rem 1rem;
+    white-space: nowrap;
+  }
+
+  .friends-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .friend-card {
+    padding: 1rem;
+  }
+
+  .friend-avatar {
+    width: 50px;
+    height: 50px;
+  }
+
+  .friend-actions {
+    flex-direction: column;
+  }
+} 
