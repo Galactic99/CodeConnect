@@ -4,6 +4,7 @@ const { WebSocketServer } = require('ws');
 const http = require('http');
 const supabase = require('./supabase');
 const authRoutes = require('./auth');
+const developersRoutes = require('./routes/developers');
 
 const app = express();
 app.use(cors());
@@ -11,6 +12,7 @@ app.use(express.json());
 
 // Routes
 app.use('/auth', authRoutes);
+app.use('/api/developers', developersRoutes);
 
 // Health Check
 app.get('/health', (req, res) => {
