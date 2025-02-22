@@ -143,16 +143,30 @@ function App() {
                   </div>
                   <div className="session-card card">
                     <h3>Join Existing Session</h3>
-                    <input 
-                      type="text" 
-                      placeholder="Enter session ID"
-                      className="input"
-                      onKeyPress={(e) => {
-                        if (e.key === 'Enter') {
-                          window.location.href = `/session/${e.target.value}`;
-                        }
-                      }}
-                    />
+                    <div className="join-session-container">
+                      <input 
+                        type="text" 
+                        placeholder="Enter session ID"
+                        className="input"
+                        id="sessionInput"
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter') {
+                            window.location.href = `/session/${e.target.value}`;
+                          }
+                        }}
+                      />
+                      <button 
+                        className="btn btn-primary"
+                        onClick={() => {
+                          const sessionId = document.getElementById('sessionInput').value;
+                          if (sessionId) {
+                            window.location.href = `/session/${sessionId}`;
+                          }
+                        }}
+                      >
+                        Join
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>

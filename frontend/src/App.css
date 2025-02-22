@@ -211,6 +211,20 @@
   transform: translateY(-2px);
 }
 
+.join-session-container {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.join-session-container .input {
+  flex: 1;
+}
+
+.join-session-container .btn {
+  white-space: nowrap;
+}
+
 @media (max-width: 768px) {
   .nav-content {
     flex-direction: column;
@@ -249,5 +263,13 @@
 
   .session-options {
     grid-template-columns: 1fr;
+  }
+
+  .join-session-container {
+    flex-direction: column;
+  }
+
+  .join-session-container .btn {
+    width: 100%;
   }
 } 
